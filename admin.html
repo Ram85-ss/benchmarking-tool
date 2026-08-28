@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Benchmarking Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .glass {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        table {
+            font-size: 0.875rem;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body class="min-h-screen py-8 px-4">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-4xl font-bold text-white mb-2">Admin Dashboard</h1>
+            <p class="text-white opacity-90">Global Gateway Benchmarking Tool - Responses & Analytics</p>
+        </div>
+
+        <!-- Statistics -->
+        <div id="stats" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div class="stat-card">
+                <div class="text-3xl font-bold mb-2" id="project-count">0</div>
+                <p>Project Submissions</p>
+            </div>
+            <div class="stat-card">
+                <div class="text-3xl font-bold mb-2" id="firm-count">0</div>
+                <p>Firm Submissions</p>
+            </div>
+            <div class="stat-card">
+                <div class="text-3xl font-bold mb-2" id="total-count">0</div>
+                <p>Total Responses</p>
+            </div>
+            <div class="stat-card">
+                <div class="text-sm opacity-90 mb-2">Last Updated</div>
+                <p id="last-update" class="text-lg">--:-- --</p>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="glass rounded-lg p-6 mb-6">
+            <div class="flex gap-4 mb-6 border-b border-gray-200">
+                <button onclick="switchTab('projects')" id="projects-tab" class="px-4 py-2 font-semibold text-purple-600 border-b-2 border-purple-600">
+                    📊 Project Submissions
+                </button>
+                <button onclick="switchTab('firms')" id="firms-tab" class="px-4 py-2 font-semibold text-gray-500 border-b-2 border-transparent">
+                    🏢 Firm Submissions
+                </button>
+            </div>
+
+            <!-- Project Submissions Table -->
+            <div id="projects-content">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-800">Project Level Submissions</h2>
+                    <button onclick="downloadJSON('projects')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                        ⬇️ Export JSON
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-100 border-b-2 border-gray-300">
+                            <tr>
+                                <th class="px-4 py-3 text-left font-semibold text-gray-800">ID</th>
+                                <th class="px-4 py-3 text-left font-semibold text-gray-800">Project Title</th>
+                                <th class="px-4 py-3 text-left font-semibold text-gray-800">Agency</th>
+                                <th class="px-4 py-3 text-left font-semibold text-gray-800">Firm</th>
+                                <th class="px-4 py-3 text-left font-semibold text-gray-800">Cost (USD)</th>
+                                <th class="px-4 py-3 text-left font-semibold text-gray-800">Submitted</th>
+                                <th class="px-4 py-3 text-center font-semibold text-gray-800">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="projects-table" class="divide-y divide-gray-200">
+                            <tr><td colspan="7" class="px-4 py-4 text-center text-gray-500">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Firm Submissions Table -->
+            <div id="firms-content" class="hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-800">Firm Level Submissions</h2>
+                    <button onclick="downloadJSON('firms')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                        ⬇️ Export JSON
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-100 border-b-2 border-gray-300">
+                            <tr>
+                                <th class="px-4 py-3 text-left font-semibold text-gray-800">ID</th>
+                                <th class="px-4 py-3 text-left font-semibold text-gray-800">Firm Name</th>
+                                <th class="px-4 py-3 text-left font-semibold text-gray-800">Submitted</th>
+                                <th class="px-4 py-3 text-center font-semibold text-gray-800">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="firms-table" class="divide-y divide-gray-200">
+                            <tr><td colspan="4" class="px-4 py-4 text-center text-gray-500">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detail Modal -->
+    <div id="detailModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="glass rounded-lg max-w-2xl w-full max-h-96 overflow-y-auto p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-gray-800">Submission Details</h2>
+                <button onclick="closeModal()" class="text-2xl text-gray-500 hover:text-gray-700">×</button>
+            </div>
+            <div id="modalContent" class="text-gray-700">
+                <!-- Details will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin;
+        let projectsData = [];
+        let firmsData = [];
+
+        // Initialize
+        async function init() {
+            await loadStats();
+            await loadProjects();
+            await loadFirms();
+        }
+
+        async function loadStats() {
+            try {
+                const response = await fetch(`${API_URL}/api/stats`);
+                const data = await response.json();
+                
+                document.getElementById('project-count').textContent = data.total_project_submissions;
+                document.getElementById('firm-count').textContent = data.total_firm_submissions;
+                document.getElementById('total-count').textContent = data.total_submissions;
+                
+                const date = new Date(data.last_updated);
+                document.getElementById('last-update').textContent = date.toLocaleString();
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        async function loadProjects() {
+            try {
+                const response = await fetch(`${API_URL}/api/admin/projects`);
+                projectsData = await response.json();
+                renderProjectsTable();
+            } catch (error) {
+                console.error('Error loading projects:', error);
+                document.getElementById('projects-table').innerHTML = `
+                    <tr><td colspan="7" class="px-4 py-4 text-center text-red-500">Error loading data</td></tr>
+                `;
+            }
+        }
+
+        async function loadFirms() {
+            try {
+                const response = await fetch(`${API_URL}/api/admin/firms`);
+                firmsData = await response.json();
+                renderFirmsTable();
+            } catch (error) {
+                console.error('Error loading firms:', error);
+                document.getElementById('firms-table').innerHTML = `
+                    <tr><td colspan="4" class="px-4 py-4 text-center text-red-500">Error loading data</td></tr>
+                `;
+            }
+        }
+
+        function renderProjectsTable() {
+            const tbody = document.getElementById('projects-table');
+            if (projectsData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-4 text-center text-gray-500">No submissions yet</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = projectsData.map(project => `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 font-mono text-sm">${project.id}</td>
+                    <td class="px-4 py-3"><strong>${project.project_title}</strong></td>
+                    <td class="px-4 py-3 text-sm">${project.implementing_agency}</td>
+                    <td class="px-4 py-3 text-sm">${project.implementing_firm}</td>
+                    <td class="px-4 py-3 font-mono">$${parseFloat(project.initial_cost).toLocaleString()}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">${new Date(project.submission_date).toLocaleDateString()}</td>
+                    <td class="px-4 py-3 text-center">
+                        <button onclick="showProjectDetail(${project.id})" class="text-blue-600 hover:underline">
+                            View Details
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderFirmsTable() {
+            const tbody = document.getElementById('firms-table');
+            if (firmsData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-4 text-center text-gray-500">No submissions yet</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = firmsData.map(firm => `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 font-mono text-sm">${firm.id}</td>
+                    <td class="px-4 py-3"><strong>${firm.firm_name}</strong></td>
+                    <td class="px-4 py-3 text-sm text-gray-500">${new Date(firm.submission_date).toLocaleDateString()}</td>
+                    <td class="px-4 py-3 text-center">
+                        <button onclick="showFirmDetail(${firm.id})" class="text-blue-600 hover:underline">
+                            View Details
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function switchTab(tab) {
+            const projectsTab = document.getElementById('projects-tab');
+            const firmsTab = document.getElementById('firms-tab');
+            const projectsContent = document.getElementById('projects-content');
+            const firmsContent = document.getElementById('firms-content');
+
+            if (tab === 'projects') {
+                projectsTab.classList.add('text-purple-600', 'border-purple-600');
+                projectsTab.classList.remove('text-gray-500', 'border-transparent');
+                firmsTab.classList.remove('text-purple-600', 'border-purple-600');
+                firmsTab.classList.add('text-gray-500', 'border-transparent');
+                projectsContent.classList.remove('hidden');
+                firmsContent.classList.add('hidden');
+            } else {
+                firmsTab.classList.add('text-purple-600', 'border-purple-600');
+                firmsTab.classList.remove('text-gray-500', 'border-transparent');
+                projectsTab.classList.remove('text-purple-600', 'border-purple-600');
+                projectsTab.classList.add('text-gray-500', 'border-transparent');
+                firmsContent.classList.remove('hidden');
+                projectsContent.classList.add('hidden');
+            }
+        }
+
+        function showProjectDetail(id) {
+            const project = projectsData.find(p => p.id === id);
+            if (!project) return;
+
+            const modal = document.getElementById('detailModal');
+            const content = document.getElementById('modalContent');
+
+            content.innerHTML = `
+                <div class="space-y-4">
+                    <div>
+                        <h3 class="font-bold text-gray-800">Project Information</h3>
+                        <p><strong>ID:</strong> ${project.project_id}</p>
+                        <p><strong>Title:</strong> ${project.project_title}</p>
+                        <p><strong>Agency:</strong> ${project.implementing_agency}</p>
+                        <p><strong>Firm:</strong> ${project.implementing_firm}</p>
+                        <p><strong>Initial Cost:</strong> $${parseFloat(project.initial_cost).toLocaleString()}</p>
+                        <p><strong>Duration:</strong> ${project.duration} years</p>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-800 mt-4">Performance Data</h3>
+                        <pre class="bg-gray-100 p-3 rounded text-xs overflow-x-auto">
+${JSON.stringify({
+  cost: project.cost_performance,
+  schedule: project.schedule_performance,
+  quality: project.quality_performance,
+  local_content: project.local_content_performance,
+  safety: project.safety_env_performance
+}, null, 2)}
+                        </pre>
+                    </div>
+                </div>
+            `;
+
+            modal.classList.remove('hidden');
+        }
+
+        function showFirmDetail(id) {
+            const firm = firmsData.find(f => f.id === id);
+            if (!firm) return;
+
+            const modal = document.getElementById('detailModal');
+            const content = document.getElementById('modalContent');
+
+            content.innerHTML = `
+                <div class="space-y-4">
+                    <div>
+                        <h3 class="font-bold text-gray-800">Firm Information</h3>
+                        <p><strong>Name:</strong> ${firm.firm_name}</p>
+                        <p><strong>Submitted:</strong> ${new Date(firm.submission_date).toLocaleString()}</p>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-800 mt-4">Performance Data</h3>
+                        <pre class="bg-gray-100 p-3 rounded text-xs overflow-x-auto">
+${JSON.stringify({
+  financial: firm.financial_performance,
+  competitiveness: firm.competitiveness,
+  customer_satisfaction: firm.customer_satisfaction,
+  technology: firm.technology_advancement,
+  communication: firm.communication_framework,
+  collaboration: firm.collaboration,
+  employee_satisfaction: firm.employee_satisfaction,
+  product: firm.product_orientation
+}, null, 2)}
+                        </pre>
+                    </div>
+                </div>
+            `;
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('detailModal').classList.add('hidden');
+        }
+
+        function downloadJSON(type) {
+            const data = type === 'projects' ? projectsData : firmsData;
+            const element = document.createElement('a');
+            element.setAttribute('href', 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(data, null, 2)));
+            element.setAttribute('download', `${type}_submissions_${new Date().toISOString().split('T')[0]}.json`);
+            element.style.display = 'none';
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+        }
+
+        // Auto-refresh every 30 seconds
+        setInterval(() => {
+            loadStats();
+            loadProjects();
+            loadFirms();
+        }, 30000);
+
+        // Initial load
+        init();
+    </script>
+</body>
+</html>

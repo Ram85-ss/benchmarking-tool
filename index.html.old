@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Gateway Benchmarking Tool</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .form-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .success-message {
+            animation: slideDown 0.3s ease-out;
+        }
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .section-title {
+            border-left: 4px solid #667eea;
+            padding-left: 12px;
+        }
+        input[type="text"], input[type="email"], input[type="number"], input[type="date"], select, textarea {
+            transition: border-color 0.3s;
+        }
+        input[type="text"]:focus, input[type="email"]:focus, input[type="number"]:focus, input[type="date"]:focus, select:focus, textarea:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        function BenchmarkingTool() {
+            const [currentStep, setCurrentStep] = useState('intro');
+            const [loading, setLoading] = useState(false);
+            const [message, setMessage] = useState('');
+            const API_URL = window.location.origin;
+
+            // Project Level State
+            const [projectData, setProjectData] = useState({
+                project_id: '',
+                project_title: '',
+                implementing_agency: '',
+                funding_agency: '',
+                implementing_firm: '',
+                initial_cost: '',
+                start_date: '',
+                duration: '',
+                cost_performance: {},
+                schedule_performance: {},
+                quality_performance: {},
+                local_content_performance: {},
+                safety_env_performance: {}
+            });
+
+            // Firm Level State
+            const [firmData, setFirmData] = useState({
+                firm_name: '',
+                financial_performance: {},
+                competitiveness: {},
+                customer_satisfaction: {},
+                technology_advancement: {},
+                communication_framework: {},
+                collaboration: {},
+                employee_satisfaction: {},
+                product_orientation: {}
+            });
+
+            const handleProjectChange = (field, value) => {
+                setProjectData(prev => ({
+                    ...prev,
+                    [field]: value
+                }));
+            };
+
+            const handlePerformanceChange = (category, metricIndex, field, value) => {
+                setProjectData(prev => ({
+                    ...prev,
+                    [category]: {
+                        ...prev[category],
+                        [metricIndex]: {
+                            ...prev[category][metricIndex],
+                            [field]: value
+                        }
+                    }
+                }));
+            };
+
+            const handleFirmChange = (field, value) => {
+                setFirmData(prev => ({
+                    ...prev,
+                    [field]: value
+                }));
+            };
+
+            const handleFirmPerformanceChange = (category, metricIndex, field, value) => {
+                setFirmData(prev => ({
+                    ...prev,
+                    [category]: {
+                        ...prev[category],
+                        [metricIndex]: {
+                            ...prev[category][metricIndex],
+                            [field]: value
+                        }
+                    }
+                }));
+            };
+
+            const submitProject = async () => {
+                setLoading(true);
+                try {
+                    const response = await fetch(`${API_URL}/api/submit-project`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(projectData)
+                    });
+
+                    if (response.ok) {
+                        setMessage('✅ Project data submitted successfully!');
+                        setCurrentStep('success');
+                        setTimeout(() => {
+                            setCurrentStep('intro');
+                            setProjectData({
+                                project_id: '',
+                                project_title: '',
+                                implementing_agency: '',
+                                funding_agency: '',
+                                implementing_firm: '',
+                                initial_cost: '',
+                                start_date: '',
+                                duration: '',
+                                cost_performance: {},
+                                schedule_performance: {},
+                                quality_performance: {},
+                                local_content_performance: {},
+                                safety_env_performance: {}
+                            });
+                            setMessage('');
+                        }, 3000);
+                    }
+                } catch (error) {
+                    setMessage('❌ Error submitting data: ' + error.message);
+                }
+                setLoading(false);
+            };
+
+            const submitFirm = async () => {
+                setLoading(true);
+                try {
+                    const response = await fetch(`${API_URL}/api/submit-firm`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(firmData)
+                    });
+
+                    if (response.ok) {
+                        setMessage('✅ Firm data submitted successfully!');
+                        setCurrentStep('success');
+                        setTimeout(() => {
+                            setCurrentStep('intro');
+                            setFirmData({
+                                firm_name: '',
+                                financial_performance: {},
+                                competitiveness: {},
+                                customer_satisfaction: {},
+                                technology_advancement: {},
+                                communication_framework: {},
+                                collaboration: {},
+                                employee_satisfaction: {},
+                                product_orientation: {}
+                            });
+                            setMessage('');
+                        }, 3000);
+                    }
+                } catch (error) {
+                    setMessage('❌ Error submitting data: ' + error.message);
+                }
+                setLoading(false);
+            };
+
+            return (
+                <div className="min-h-screen py-8 px-4">
+                    <div className="max-w-4xl mx-auto">
+                        {/* Header */}
+                        <div className="text-center text-white mb-8">
+                            <h1 className="text-4xl font-bold mb-2">Global Gateway Benchmarking Tool</h1>
+                            <p className="text-lg opacity-90">Job Creation Potential & Competitiveness Study - Uganda's Local Construction Industry</p>
+                        </div>
+
+                        {message && (
+                            <div className="mb-6 success-message">
+                                <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+                                    <p className="text-blue-800 text-center font-semibold">{message}</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Intro Screen */}
+                        {currentStep === 'intro' && (
+                            <div className="form-container p-8 mb-6">
+                                <h2 className="text-3xl font-bold text-gray-800 mb-6">Welcome</h2>
+                                
+                                <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded">
+                                    <p className="text-gray-700 leading-relaxed">
+                                        This benchmarking tool is designed to collect data measuring and comparing the performance of Local Construction Industry Global Gateway Projects and Implementing Firms.
+                                    </p>
+                                    <p className="text-gray-700 mt-4 leading-relaxed">
+                                        <strong>Confidentiality:</strong> All information provided is kept strictly confidential and used solely for this study.
+                                    </p>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <button
+                                        onClick={() => setCurrentStep('project-profile')}
+                                        className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-bold py-3 px-6 rounded-lg transition"
+                                    >
+                                        📊 Project Level Benchmarking (Part B)
+                                    </button>
+                                    <button
+                                        onClick={() => setCurrentStep('firm-profile')}
+                                        className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-3 px-6 rounded-lg transition"
+                                    >
+                                        🏢 Firm/Contractor Level (Part C)
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Project Profile */}
+                        {currentStep === 'project-profile' && (
+                            <div className="form-container p-8">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-2xl font-bold text-gray-800">Part B: Project Level Benchmarking</h2>
+                                    <button 
+                                        onClick={() => setCurrentStep('intro')}
+                                        className="text-gray-500 hover:text-gray-700 text-2xl"
+                                    >×</button>
+                                </div>
+
+                                {/* B.1 Project Profile */}
+                                <div className="mb-8">
+                                    <h3 className="text-xl font-bold text-gray-800 section-title mb-4">B.1: Project Profile</h3>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Project ID</label>
+                                            <input
+                                                type="text"
+                                                value={projectData.project_id}
+                                                onChange={(e) => handleProjectChange('project_id', e.target.value)}
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none"
+                                                placeholder="Enter Project ID"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Project Title</label>
+                                            <input
+                                                type="text"
+                                                value={projectData.project_title}
+                                                onChange={(e) => handleProjectChange('project_title', e.target.value)}
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none"
+                                                placeholder="Enter Project Title"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Implementing Agency/MDA</label>
+                                            <input
+                                                type="text"
+                                                value={projectData.implementing_agency}
+                                                onChange={(e) => handleProjectChange('implementing_agency', e.target.value)}
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Funding Agency</label>
+                                            <input
+                                                type="text"
+                                                value={projectData.funding_agency}
+                                                onChange={(e) => handleProjectChange('funding_agency', e.target.value)}
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Implementing Firm/Contractor</label>
+                                            <input
+                                                type="text"
+                                                value={projectData.implementing_firm}
+                                                onChange={(e) => handleProjectChange('implementing_firm', e.target.value)}
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Initial Project Cost (USD)</label>
+                                            <input
+                                                type="number"
+                                                value={projectData.initial_cost}
+                                                onChange={(e) => handleProjectChange('initial_cost', e.target.value)}
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Project Start Date</label>
+                                            <input
+                                                type="date"
+                                                value={projectData.start_date}
+                                                onChange={(e) => handleProjectChange('start_date', e.target.value)}
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Project Duration (years)</label>
+                                            <input
+                                                type="number"
+                                                step="0.1"
+                                                value={projectData.duration}
+                                                onChange={(e) => handleProjectChange('duration', e.target.value)}
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* B.2 Performance Metrics */}
+                                <PerformanceSection 
+                                    projectData={projectData}
+                                    handlePerformanceChange={handlePerformanceChange}
+                                />
+
+                                <div className="flex gap-4 mt-8">
+                                    <button
+                                        onClick={() => setCurrentStep('intro')}
+                                        className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-3 px-6 rounded-lg transition"
+                                    >
+                                        ← Back
+                                    </button>
+                                    <button
+                                        onClick={submitProject}
+                                        disabled={loading}
+                                        className="flex-1 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-bold py-3 px-6 rounded-lg transition disabled:opacity-50"
+                                    >
+                                        {loading ? 'Submitting...' : '✓ Submit Project Data'}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Firm Profile */}
+                        {currentStep === 'firm-profile' && (
+                            <div className="form-container p-8">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-2xl font-bold text-gray-800">Part C: Firm/Contractor Level Benchmarking</h2>
+                                    <button 
+                                        onClick={() => setCurrentStep('intro')}
+                                        className="text-gray-500 hover:text-gray-700 text-2xl"
+                                    >×</button>
+                                </div>
+
+                                <div className="mb-6">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Firm/Contractor Name</label>
+                                    <input
+                                        type="text"
+                                        value={firmData.firm_name}
+                                        onChange={(e) => handleFirmChange('firm_name', e.target.value)}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none"
+                                        placeholder="Enter Firm Name"
+                                    />
+                                </div>
+
+                                <FirmPerformanceSection 
+                                    firmData={firmData}
+                                    handleFirmPerformanceChange={handleFirmPerformanceChange}
+                                />
+
+                                <div className="flex gap-4 mt-8">
+                                    <button
+                                        onClick={() => setCurrentStep('intro')}
+                                        className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-3 px-6 rounded-lg transition"
+                                    >
+                                        ← Back
+                                    </button>
+                                    <button
+                                        onClick={submitFirm}
+                                        disabled={loading}
+                                        className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-3 px-6 rounded-lg transition disabled:opacity-50"
+                                    >
+                                        {loading ? 'Submitting...' : '✓ Submit Firm Data'}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Success Screen */}
+                        {currentStep === 'success' && (
+                            <div className="form-container p-12 text-center">
+                                <div className="text-6xl mb-4">✅</div>
+                                <h2 className="text-3xl font-bold text-green-600 mb-4">Submission Successful!</h2>
+                                <p className="text-gray-600 text-lg mb-8">Your data has been securely saved. Thank you for your contribution to the Global Gateway study.</p>
+                                <button
+                                    onClick={() => setCurrentStep('intro')}
+                                    className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold py-3 px-8 rounded-lg transition"
+                                >
+                                    Submit Another Form
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        function PerformanceSection({ projectData, handlePerformanceChange }) {
+            const categories = [
+                {
+                    id: 'cost_performance',
+                    name: 'Cost Performance',
+                    weight: '20%',
+                    metrics: [
+                        'Cost Variation (%)',
+                        'Unit Cost',
+                        'Change Orders Ratio',
+                        'Payment Compliance',
+                        'Procurement Savings Ratio'
+                    ]
+                },
+                {
+                    id: 'schedule_performance',
+                    name: 'Schedule Performance',
+                    weight: '20%',
+                    metrics: [
+                        'Schedule Variation',
+                        'Milestone Consistency',
+                        'Days lost to rain/floods',
+                        'RFI Response Time',
+                        'RFC Response Time'
+                    ]
+                },
+                {
+                    id: 'quality_performance',
+                    name: 'Quality Performance',
+                    weight: '20%',
+                    metrics: [
+                        'Defect Density',
+                        'Material Test Pass Rate',
+                        'Quality Compliance',
+                        'Technology Adoption',
+                        'Rework Costs Ratio'
+                    ]
+                },
+                {
+                    id: 'local_content_performance',
+                    name: 'Local Content & Job Creation',
+                    weight: '25%',
+                    metrics: [
+                        'Local Workforce Intensity',
+                        'Skill Transfer Ratio',
+                        'Local Material Utilization (200km)',
+                        'Sub-contracting Ratio',
+                        'Skill Development Spending',
+                        'Skill Development Hours',
+                        'Workforce Skill Levels',
+                        'Local Procurement %',
+                        'Avg Skilled Worker Earnings',
+                        'Apprenticeships Ratio'
+                    ]
+                },
+                {
+                    id: 'safety_env_performance',
+                    name: 'Safety, Environmental & Cross Cutting',
+                    weight: '15%',
+                    metrics: [
+                        'Accident Incidence Rate',
+                        'Accident Costs Ratio',
+                        'PPE Availability',
+                        'Environmental Compliance',
+                        'Sustainable Materials Usage',
+                        'Waste Management %',
+                        'Female Ratio',
+                        'Youth Ratio'
+                    ]
+                }
+            ];
+
+            return (
+                <div className="mb-8">
+                    <h3 className="text-xl font-bold text-gray-800 section-title mb-6">B.2: Project Performance Metrics</h3>
+                    
+                    {categories.map((category) => (
+                        <div key={category.id} className="mb-8 bg-gray-50 p-6 rounded-lg">
+                            <div className="flex justify-between items-center mb-4">
+                                <h4 className="text-lg font-bold text-gray-800">{category.name}</h4>
+                                <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-semibold">Weight: {category.weight}</span>
+                            </div>
+
+                            {category.metrics.map((metric, idx) => (
+                                <div key={idx} className="mb-6 bg-white p-4 rounded border border-gray-200">
+                                    <h5 className="font-semibold text-gray-700 mb-3">{metric}</h5>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm text-gray-600 mb-1">Assessment Result</label>
+                                            <input
+                                                type="text"
+                                                onChange={(e) => handlePerformanceChange(category.id, idx, 'result', e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none text-sm"
+                                                placeholder="Enter value or percentage"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm text-gray-600 mb-1">Data Source</label>
+                                            <input
+                                                type="text"
+                                                onChange={(e) => handlePerformanceChange(category.id, idx, 'source', e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none text-sm"
+                                                placeholder="e.g., Project Records, Audit Report"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+
+        function FirmPerformanceSection({ firmData, handleFirmPerformanceChange }) {
+            const categories = [
+                {
+                    id: 'financial_performance',
+                    name: 'Financial Performance',
+                    weight: '15%',
+                    metrics: [
+                        'Gross Profit Margin',
+                        'Net Profit Margin',
+                        'Return on Assets',
+                        'Administrative Costs Ratio',
+                        'Debt Ratio',
+                        'Working Capital',
+                        'Backlog Gross Profit'
+                    ]
+                },
+                {
+                    id: 'competitiveness',
+                    name: 'Competitiveness',
+                    weight: '25%',
+                    metrics: [
+                        'Bid Success Rate',
+                        'Market Survey Frequency',
+                        'CapEX Ratio',
+                        'Tax Compliance',
+                        'Health & Safety Rate',
+                        'Human Capital Qualifications',
+                        'Training Investment',
+                        'Female Ratio'
+                    ]
+                },
+                {
+                    id: 'customer_satisfaction',
+                    name: 'Customer Satisfaction',
+                    weight: '10%',
+                    metrics: [
+                        'Customer Satisfaction Scores',
+                        'Project Acceptance Rate',
+                        'Complaint Rate'
+                    ]
+                },
+                {
+                    id: 'technology_advancement',
+                    name: 'Technology Advancement',
+                    weight: '10%',
+                    metrics: [
+                        'Technology Investment Ratio',
+                        'R&D Investment',
+                        'Employee Digital Skills'
+                    ]
+                },
+                {
+                    id: 'communication_framework',
+                    name: 'Communication Framework',
+                    weight: '10%',
+                    metrics: [
+                        'Web-based Communication',
+                        'Staff Meetings Frequency',
+                        'Document Compliance Rate'
+                    ]
+                },
+                {
+                    id: 'collaboration',
+                    name: 'Collaboration',
+                    weight: '10%',
+                    metrics: [
+                        'Teamwork Investment',
+                        'CSR Ratio',
+                        'RFI Turnaround Time',
+                        'Conflict Resolution Rate'
+                    ]
+                },
+                {
+                    id: 'employee_satisfaction',
+                    name: 'Employee Satisfaction',
+                    weight: '10%',
+                    metrics: [
+                        'Incentives Ratio',
+                        'Workman Compensation',
+                        'Leave Period',
+                        'Staff Welfare Ratio'
+                    ]
+                },
+                {
+                    id: 'product_orientation',
+                    name: 'Product Orientation',
+                    weight: '10%',
+                    metrics: [
+                        'Quality Certification %',
+                        'Quality Officers',
+                        'Marketing Investment',
+                        'Delivery Precision',
+                        'Cost Precision'
+                    ]
+                }
+            ];
+
+            return (
+                <div>
+                    <h3 className="text-xl font-bold text-gray-800 section-title mb-6">C.1: Firm/Contractor Performance</h3>
+                    
+                    {categories.map((category) => (
+                        <div key={category.id} className="mb-8 bg-gray-50 p-6 rounded-lg">
+                            <div className="flex justify-between items-center mb-4">
+                                <h4 className="text-lg font-bold text-gray-800">{category.name}</h4>
+                                <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold">Weight: {category.weight}</span>
+                            </div>
+
+                            {category.metrics.map((metric, idx) => (
+                                <div key={idx} className="mb-6 bg-white p-4 rounded border border-gray-200">
+                                    <h5 className="font-semibold text-gray-700 mb-3">{metric}</h5>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm text-gray-600 mb-1">Assessment Result</label>
+                                            <input
+                                                type="text"
+                                                onChange={(e) => handleFirmPerformanceChange(category.id, idx, 'result', e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none text-sm"
+                                                placeholder="Enter value or percentage"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm text-gray-600 mb-1">Data Source</label>
+                                            <input
+                                                type="text"
+                                                onChange={(e) => handleFirmPerformanceChange(category.id, idx, 'source', e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none text-sm"
+                                                placeholder="e.g., Financial Records, HR System"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+
+        ReactDOM.render(<BenchmarkingTool />, document.getElementById('root'));
+    </script>
+</body>
+</html>
