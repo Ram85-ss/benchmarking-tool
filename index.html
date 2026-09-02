@@ -220,7 +220,7 @@
                         <button onClick={() => { if (step > 1) setStep(step - 1); else setPage('dashboard'); }} className="flex-1 bg-gray-300 text-gray-800 px-4 py-3 rounded-lg font-bold">← Back</button>
                         <button onClick={saveDraft} className="flex-1 bg-blue-500 text-white px-4 py-3 rounded-lg font-bold">💾 Save Draft</button>
                         {step < 7 && <button onClick={() => setStep(step + 1)} className="flex-1 bg-purple-600 text-white px-4 py-3 rounded-lg font-bold">Next →</button>}
-                        {step === 7 && <button className="flex-1 bg-green-600 text-white px-4 py-3 rounded-lg font-bold">✅ Submit</button>}
+                        {step === 7 && <button onClick={() => { setMsg('✅ Project submitted successfully!'); setTimeout(() => setPage('dashboard'), 3500); }} className="flex-1 bg-green-600 text-white px-4 py-3 rounded-lg font-bold">✅ Submit</button>}
                     </div>
                 </div>
             );
