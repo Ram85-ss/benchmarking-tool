@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        .error-input { border-color: #dc2626 !important; background: #fef2f2; }
+        .error-text { color: #dc2626; font-size: 12px; margin-top: 4px; }
+        .draft-box { background: #dbeafe; border-left: 4px solid #3b82f6; padding: 12px; border-radius: 4px; margin-bottom: 16px; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        function App() {
+            const [page, setPage] = useState('auth');
+            const [token, setToken] = useState(localStorage.getItem('token'));
+            const [user, setUser] = useState(null);
+
+            useEffect(() => {
+                if (token) {
+                    fetch('/api/user/profile', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    })
+                    .then(r => r.json())
+                    .then(d => { setUser(d); setPage('dashboard'); })
+                    .catch(() => { localStorage.removeItem('token'); setToken(null); });
+                }
+            }, [token]);
+
+            return (
+                <div className="min-h-screen bg-gradient-to-r from-purple-600 to-purple-700 p-8">
+                    <div className="max-w-4xl mx-auto">
+                        {page === 'auth' && <AuthPage setToken={setToken} />}
+                        {page === 'dashboard' && user && <Dashboard user={user} setPage={setPage} setToken={setToken} />}
+                        {page === 'project' && token && <ProjectForm token={token} setPage={setPage} />}
+                        {page === 'firm' && token && <FirmForm token={token} setPage={setPage} />}
+                    </div>
+                </div>
+            );
+        }
+
+        function AuthPage({ setToken }) {
+            const [mode, setMode] = useState('login');
+            const [form, setForm] = useState({ email: '', password: '', username: '', country: '' });
+            const [msg, setMsg] = useState('');
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                try {
+                    const url = mode === 'login' ? '/api/login' : '/api/register';
+                    const body = mode === 'login' ? { email: form.email, password: form.password } : form;
+                    
+                    const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                    const data = await res.json();
+                    
+                    if (res.ok) {
+                        localStorage.setItem('token', data.token);
+                        setToken(data.token);
+                    } else {
+                        setMsg('❌ ' + (data.error || 'Error'));
+                    }
+                } catch (e) {
+                    setMsg('❌ Error: ' + e.message);
+                }
+            };
+
+            return (
+                <div className="bg-white p-8 rounded-lg max-w-md mx-auto">
+                    {msg && <div className="mb-4 p-3 bg-red-50 text-red-800 rounded">{msg}</div>}
+                    <h1 className="text-2xl font-bold mb-6">{mode === 'login' ? 'Login' : 'Register'}</h1>
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        {mode === 'register' && (
+                            <>
+                                <input type="text" placeholder="Username" value={form.username} onChange={(e) => setForm({...form, username: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+                                <input type="text" placeholder="Country" value={form.country} onChange={(e) => setForm({...form, country: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+                            </>
+                        )}
+                        <input type="email" placeholder="Email" value={form.email} onChange={(e) => setForm({...form, email: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-lg" required />
+                        <input type="password" placeholder="Password" value={form.password} onChange={(e) => setForm({...form, password: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-lg" required />
+                        <button type="submit" className="w-full bg-purple-600 text-white py-2 rounded-lg font-bold">Sign In / Register</button>
+                    </form>
+                    <p className="text-center mt-4"><button onClick={() => setMode(mode === 'login' ? 'register' : 'login')} className="text-purple-600 font-bold">{mode === 'login' ? 'Create Account' : 'Have Account?'}</button></p>
+                </div>
+            );
+        }
+
+        function Dashboard({ user, setPage, setToken }) {
+            return (
+                <div className="bg-white p-8 rounded-lg max-w-2xl">
+                    <div className="flex justify-between mb-6">
+                        <h1 className="text-2xl font-bold">Dashboard</h1>
+                        <button onClick={() => { localStorage.removeItem('token'); setToken(null); }} className="bg-red-600 text-white px-4 py-2 rounded-lg">Logout</button>
+                    </div>
+                    <p className="text-gray-600 mb-6">Welcome, {user.username}!</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <button onClick={() => setPage('project')} className="bg-purple-600 text-white px-6 py-4 rounded-lg font-bold text-lg">📝 Project Form</button>
+                        <button onClick={() => setPage('firm')} className="bg-blue-600 text-white px-6 py-4 rounded-lg font-bold text-lg">📝 Firm Form</button>
+                    </div>
+                </div>
+            );
+        }
+
+        function ProjectForm({ token, setPage }) {
+            const [step, setStep] = useState(1);
+            const [msg, setMsg] = useState('');
+            const [draftId, setDraftId] = useState('');
+            const [errors, setErrors] = useState({});
+            const [data, setData] = useState({
+                project_id: '', project_title: '', implementing_agency: '', funding_agency: '', implementing_firm: '', initial_cost: '', start_date: '', duration: ''
+            });
+
+            useEffect(() => {
+                const saved = localStorage.getItem('projectDraftId');
+                if (saved) {
+                    fetch(`/api/load-project-draft/${saved}`, { headers: { 'Authorization': `Bearer ${token}` } })
+                        .then(r => {
+                            if (!r.ok) throw new Error('Draft not found');
+                            return r.json();
+                        })
+                        .then(d => {
+                            if (d && d.project_data) {
+                                setData(d.project_data);
+                                setDraftId(saved);
+                                setMsg('✅ Draft loaded!');
+                                setTimeout(() => setMsg(''), 3000);
+                            }
+                        })
+                        .catch(e => {
+                            console.log('No previous draft found, starting fresh');
+                            localStorage.removeItem('projectDraftId');
+                        });
+                }
+            }, [token]);
+
+            const validateField = (field, value) => {
+                if (field === 'initial_cost' || field === 'duration') {
+                    if (!value) return true; // Empty is OK
+                    const str = value.toString().trim();
+                    // Only numbers and one decimal point allowed
+                    return /^[0-9.]*$/.test(str) && (str.match(/\./g) || []).length <= 1;
+                }
+                return true;
+            };
+
+            const handleChange = (field, value) => {
+                setData({...data, [field]: value});
+                
+                if (!validateField(field, value)) {
+                    setErrors({...errors, [field]: 'Numbers only (no letters)'});
+                } else {
+                    const newErrors = {...errors};
+                    delete newErrors[field];
+                    setErrors(newErrors);
+                }
+            };
+
+            const formatNum = (val) => {
+                if (!val) return '';
+                return val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            };
+
+            const saveDraft = async () => {
+                try {
+                    const id = draftId || 'draft_' + Date.now();
+                    const res = await fetch('/api/save-project-draft', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify({ draft_id: id, project_data: data })
+                    });
+                    if (res.ok) {
+                        setDraftId(id);
+                        localStorage.setItem('projectDraftId', id);
+                        setMsg(`✅ Draft saved! ID: ${id}`);
+                        setTimeout(() => setPage('dashboard'), 2000);
+                    }
+                } catch (e) {
+                    setMsg('❌ Save failed: ' + e.message);
+                }
+            };
+
+            return (
+                <div className="bg-white p-8 rounded-lg max-w-2xl">
+                    <button onClick={() => setPage('dashboard')} className="text-gray-500 text-2xl mb-4">← Back</button>
+                    {draftId && <div className="draft-box"><p><strong>📝 Draft ID:</strong> {draftId}</p></div>}
+                    {msg && <div className="mb-4 p-3 bg-blue-50 text-blue-800 rounded">{msg}</div>}
+                    
+                    <h2 className="text-2xl font-bold mb-6">Part B: Project Benchmarking</h2>
+                    <p className="text-gray-600 mb-4">Step {step} of 7</p>
+
+                    {step === 1 && (
+                        <div className="space-y-4">
+                            <div><label className="block text-sm font-medium mb-2">Project ID</label><input type="text" value={data.project_id} onChange={(e) => handleChange('project_id', e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Project ID" /></div>
+                            <div><label className="block text-sm font-medium mb-2">Project Title</label><input type="text" value={data.project_title} onChange={(e) => handleChange('project_title', e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Title" /></div>
+                            <div><label className="block text-sm font-medium mb-2">Implementing Agency/MDA</label><input type="text" value={data.implementing_agency} onChange={(e) => handleChange('implementing_agency', e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Agency" /></div>
+                            <div><label className="block text-sm font-medium mb-2">Funding Agency</label><input type="text" value={data.funding_agency} onChange={(e) => handleChange('funding_agency', e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Funding" /></div>
+                            <div><label className="block text-sm font-medium mb-2">Implementing Firm/Contractor</label><input type="text" value={data.implementing_firm} onChange={(e) => handleChange('implementing_firm', e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Firm" /></div>
+                            <div>
+                                <label className="block text-sm font-medium mb-2">Initial Cost (USD) - Numbers Only</label>
+                                <input type="text" value={formatNum(data.initial_cost)} onChange={(e) => handleChange('initial_cost', e.target.value.replace(/,/g, ''))} className={`w-full px-4 py-2 border rounded-lg ${errors.initial_cost ? 'error-input' : 'border-gray-300'}`} placeholder="e.g., 2500000" />
+                                {errors.initial_cost && <p className="error-text">❌ {errors.initial_cost}</p>}
+                            </div>
+                            <div><label className="block text-sm font-medium mb-2">Project Start Date</label><input type="date" value={data.start_date} onChange={(e) => handleChange('start_date', e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg" /></div>
+                            <div>
+                                <label className="block text-sm font-medium mb-2">Duration (years) - Numbers Only</label>
+                                <input type="text" value={data.duration} onChange={(e) => handleChange('duration', e.target.value)} className={`w-full px-4 py-2 border rounded-lg ${errors.duration ? 'error-input' : 'border-gray-300'}`} placeholder="e.g., 3.5" />
+                                {errors.duration && <p className="error-text">❌ {errors.duration}</p>}
+                            </div>
+                        </div>
+                    )}
+
+                    {step > 1 && step < 7 && <div className="p-4 bg-yellow-50 border-l-4 border-yellow-500"><p className="text-yellow-800"><strong>Step {step}:</strong> Performance Metrics (Coming Soon)</p></div>}
+                    {step === 7 && <div className="p-4 bg-green-50 border-l-4 border-green-500"><p className="text-green-800"><strong>✅ All sections complete!</strong></p></div>}
+
+                    <div className="flex gap-2 mt-8">
+                        <button onClick={() => { if (step > 1) setStep(step - 1); else setPage('dashboard'); }} className="flex-1 bg-gray-300 text-gray-800 px-4 py-3 rounded-lg font-bold">← Back</button>
+                        <button onClick={saveDraft} className="flex-1 bg-blue-500 text-white px-4 py-3 rounded-lg font-bold">💾 Save Draft</button>
+                        {step < 7 && <button onClick={() => setStep(step + 1)} className="flex-1 bg-purple-600 text-white px-4 py-3 rounded-lg font-bold">Next →</button>}
+                        {step === 7 && <button onClick={() => { setMsg('✅ Project submitted successfully!'); setTimeout(() => setPage('dashboard'), 3500); }} className="flex-1 bg-green-600 text-white px-4 py-3 rounded-lg font-bold">✅ Submit</button>}
+                    </div>
+                </div>
+            );
+        }
+
+        function FirmForm({ token, setPage }) {
+            const [data, setData] = useState({ firm_name: '' });
+            const [msg, setMsg] = useState('');
+            const [draftId, setDraftId] = useState('');
+
+            const saveDraft = async () => {
+                try {
+                    const id = draftId || 'draft_' + Date.now();
+                    const res = await fetch('/api/save-firm-draft', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify({ draft_id: id, firm_data: data })
+                    });
+                    if (res.ok) {
+                        setDraftId(id);
+                        localStorage.setItem('firmDraftId', id);
+                        setMsg(`✅ Saved! ID: ${id}`);
+                        setTimeout(() => setPage('dashboard'), 2000);
+                    }
+                } catch (e) {
+                    setMsg('❌ Failed: ' + e.message);
+                }
+            };
+
+            return (
+                <div className="bg-white p-8 rounded-lg max-w-2xl">
+                    <button onClick={() => setPage('dashboard')} className="text-gray-500 text-2xl mb-4">← Back</button>
+                    {draftId && <div className="draft-box"><p><strong>📝 Draft:</strong> {draftId}</p></div>}
+                    {msg && <div className="mb-4 p-3 bg-blue-50 text-blue-800 rounded">{msg}</div>}
+                    <h2 className="text-2xl font-bold mb-6">Part C: Firm Benchmarking</h2>
+                    <div><label className="block text-sm font-medium mb-2">Firm Name</label><input type="text" value={data.firm_name} onChange={(e) => setData({...data, firm_name: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Enter Firm Name" /></div>
+                    <div className="flex gap-2 mt-8">
+                        <button onClick={() => setPage('dashboard')} className="flex-1 bg-gray-300 text-gray-800 px-4 py-3 rounded-lg font-bold">← Back</button>
+                        <button onClick={saveDraft} className="flex-1 bg-blue-500 text-white px-4 py-3 rounded-lg font-bold">💾 Save Draft</button>
+                        <button className="flex-1 bg-green-600 text-white px-4 py-3 rounded-lg font-bold">Next →</button>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>

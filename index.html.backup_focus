@@ -6,7 +6,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
-        .error-input { border-color: #dc2626; background: #fef2f2; }
+        .error-input { border-color: #dc2626 !important; background: #fef2f2; }
         .error-text { color: #dc2626; font-size: 12px; margin-top: 4px; }
         .draft-box { background: #dbeafe; border-left: 4px solid #3b82f6; padding: 12px; border-radius: 4px; margin-bottom: 16px; }
         .metric-row { background: #f9fafb; padding: 12px; border-radius: 6px; margin-bottom: 12px; }
@@ -35,8 +35,9 @@
                 <div className="min-h-screen bg-gradient-to-r from-purple-600 to-purple-700 p-8">
                     <div className="max-w-4xl mx-auto">
                         {page === 'auth' && <AuthPage setToken={setToken} />}
-                        {page === 'dashboard' && user && <Dashboard user={user} setPage={setPage} setToken={setToken} setUser={setUser} />}
+                        {page === 'dashboard' && user && <Dashboard user={user} setPage={setPage} setToken={setToken} />}
                         {page === 'project' && token && <ProjectForm token={token} setPage={setPage} />}
+                        {page === 'firm' && token && <FirmForm token={token} setPage={setPage} />}
                     </div>
                 </div>
             );
@@ -61,7 +62,7 @@
                         setMsg('❌ ' + (data.error || 'Error'));
                     }
                 } catch (e) {
-                    setMsg('❌ Error');
+                    setMsg('❌ Error: ' + e.message);
                 }
             };
 
@@ -85,15 +86,18 @@
             );
         }
 
-        function Dashboard({ user, setPage, setToken, setUser }) {
+        function Dashboard({ user, setPage, setToken }) {
             return (
                 <div className="bg-white p-8 rounded-lg max-w-2xl">
                     <div className="flex justify-between mb-6">
                         <h1 className="text-2xl font-bold">Dashboard</h1>
-                        <button onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('projectDraftId'); localStorage.removeItem('firmDraftId'); setToken(null); setUser(null); setPage('auth'); }} className="bg-red-600 text-white px-4 py-2 rounded-lg">Logout</button>
+                        <button onClick={() => { localStorage.removeItem('token'); setToken(null); }} className="bg-red-600 text-white px-4 py-2 rounded-lg">Logout</button>
                     </div>
                     <p className="text-gray-600 mb-6">Welcome, {user.username}!</p>
-                    <button onClick={() => setPage('project')} className="w-full bg-purple-600 text-white px-6 py-4 rounded-lg font-bold text-lg">📝 Project Form (7 Steps)</button>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <button onClick={() => setPage('project')} className="bg-purple-600 text-white px-6 py-4 rounded-lg font-bold text-lg">📝 Project Form</button>
+                        <button onClick={() => setPage('firm')} className="bg-blue-600 text-white px-6 py-4 rounded-lg font-bold text-lg">📝 Firm Form</button>
+                    </div>
                 </div>
             );
         }
@@ -114,7 +118,7 @@
                     fetch(`/api/load-project-draft/${saved}`, { headers: { 'Authorization': `Bearer ${token}` } })
                         .then(r => r.json())
                         .then(d => { setData(d.project_data); setDraftId(saved); setMsg('✅ Draft loaded!'); setTimeout(() => setMsg(''), 3000); })
-                        .catch(e => console.log('No draft'));
+                        .catch(e => console.log('No draft found'));
                 }
             }, [token]);
 
@@ -124,29 +128,6 @@
                     const str = value.toString().trim();
                     return /^[0-9.]*$/.test(str) && (str.match(/\./g) || []).length <= 1;
                 }
-                return true;
-            };
-
-            const validateMetrics = (cat) => {
-                const metrics = data[cat];
-                const errors = [];
-                for (let key in metrics) {
-                    if (key.includes('_result') && metrics[key]) {
-                        if (!/^[0-9.]*$/.test(metrics[key])) {
-                            errors.push(key);
-                        }
-                    }
-                }
-                return errors;
-            };
-
-            const canProceed = () => {
-                if (step === 1) return !errors.initial_cost && !errors.duration && data.project_id && data.project_title;
-                if (step === 2) return validateMetrics('cost_metrics').length === 0;
-                if (step === 3) return validateMetrics('schedule_metrics').length === 0;
-                if (step === 4) return validateMetrics('quality_metrics').length === 0;
-                if (step === 5) return validateMetrics('local_content_metrics').length === 0;
-                if (step === 6) return validateMetrics('safety_metrics').length === 0;
                 return true;
             };
 
@@ -180,11 +161,28 @@
                     });
                     setDraftId(id);
                     localStorage.setItem('projectDraftId', id);
-                    setMsg(`✅ Draft saved!`);
+                    setMsg(`✅ Draft saved! ID: ${id}`);
                     setTimeout(() => setPage('dashboard'), 2000);
                 } catch (e) {
                     setMsg('❌ Failed');
                 }
+            };
+
+            const MetricInput = ({ cat, idx, label }) => {
+                const resultVal = data[cat][`${idx}_result`] || '';
+                const isInvalid = resultVal && !/^[0-9.]*$/.test(resultVal);
+                return (
+                    <div className="metric-row">
+                        <label className="block text-sm font-medium mb-2">{label}</label>
+                        <div className="grid grid-cols-2 gap-2">
+                            <div>
+                                <input type="text" placeholder="Result (numbers)" value={resultVal} onChange={(e) => handleMetricChange(cat, `${idx}_result`, e.target.value)} onBlur={(e) => { if (e.target.value && !/^[0-9.]*$/.test(e.target.value)) setErrors({...errors, [`${cat}_${idx}`]: true}); else { const newErr = {...errors}; delete newErr[`${cat}_${idx}`]; setErrors(newErr); }}} className={`w-full px-3 py-2 border rounded text-sm ${isInvalid ? 'error-input' : 'border-gray-300'}`} />
+                                {isInvalid && <p className="error-text">❌ Numbers only</p>}
+                            </div>
+                            <input type="text" placeholder="Source" value={data[cat][`${idx}_source`] || ''} onChange={(e) => handleMetricChange(cat, `${idx}_source`, e.target.value)} className="px-3 py-2 border border-gray-300 rounded text-sm" />
+                        </div>
+                    </div>
+                );
             };
 
             const pct = (step / 7) * 100;
@@ -217,100 +215,35 @@
                     {step === 2 && (
                         <div>
                             <h3 className="text-lg font-bold mb-4">B.2.1 Cost Performance (20%)</h3>
-                            <div className="space-y-3 max-h-96 overflow-y-auto">
-                                {['Cost Variation (%)', 'Unit Cost', 'Change Orders Ratio', 'Payment Compliance', 'Procurement Savings Ratio'].map((m, i) => (
-                                    <div key={i} className="metric-row">
-                                        <label className="block text-sm font-medium mb-2">{m}</label>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <div>
-                                                <input type="text" placeholder="Result (numbers)" value={data.cost_metrics[`${i}_result`] || ''} onChange={(e) => handleMetricChange('cost_metrics', `${i}_result`, e.target.value)} onBlur={(e) => { if (e.target.value && !/^[0-9.]*$/.test(e.target.value)) e.target.className = 'w-full px-3 py-2 border-2 border-red-600 bg-red-50 rounded text-sm'; else e.target.className = 'w-full px-3 py-2 border border-gray-300 rounded text-sm'; }} className="w-full px-3 py-2 border border-gray-300 rounded text-sm" />
-                                                {data.cost_metrics[`${i}_result`] && !/^[0-9.]*$/.test(data.cost_metrics[`${i}_result`]) && <p className="error-text">❌ Must be a number</p>}
-                                            </div>
-                                            <input type="text" placeholder="Source" value={data.cost_metrics[`${i}_source`] || ''} onChange={(e) => handleMetricChange('cost_metrics', `${i}_source`, e.target.value)} className="px-3 py-2 border border-gray-300 rounded text-sm" />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                            {['Cost Variation (%)', 'Unit Cost', 'Change Orders Ratio', 'Payment Compliance', 'Procurement Savings Ratio'].map((m, i) => <MetricInput key={i} cat="cost_metrics" idx={i} label={m} />)}
                         </div>
                     )}
 
                     {step === 3 && (
                         <div>
                             <h3 className="text-lg font-bold mb-4">B.2.2 Schedule Performance (20%)</h3>
-                            <div className="space-y-3 max-h-96 overflow-y-auto">
-                                {['Schedule Variation', 'Milestone Consistency', 'Days lost to rain', 'RFI Response Time', 'RFC Response Time'].map((m, i) => (
-                                    <div key={i} className="metric-row">
-                                        <label className="block text-sm font-medium mb-2">{m}</label>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <div>
-                                                <input type="text" placeholder="Result (numbers)" value={data.schedule_metrics[`${i}_result`] || ''} onChange={(e) => handleMetricChange('schedule_metrics', `${i}_result`, e.target.value)} onBlur={(e) => { if (e.target.value && !/^[0-9.]*$/.test(e.target.value)) e.target.className = 'w-full px-3 py-2 border-2 border-red-600 bg-red-50 rounded text-sm'; else e.target.className = 'w-full px-3 py-2 border border-gray-300 rounded text-sm'; }} className="w-full px-3 py-2 border border-gray-300 rounded text-sm" />
-                                                {data.schedule_metrics[`${i}_result`] && !/^[0-9.]*$/.test(data.schedule_metrics[`${i}_result`]) && <p className="error-text">❌ Must be a number</p>}
-                                            </div>
-                                            <input type="text" placeholder="Source" value={data.schedule_metrics[`${i}_source`] || ''} onChange={(e) => handleMetricChange('schedule_metrics', `${i}_source`, e.target.value)} className="px-3 py-2 border border-gray-300 rounded text-sm" />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                            {['Schedule Variation', 'Milestone Consistency', 'Days lost to rain/floods', 'RFI Response Time', 'RFC Response Time'].map((m, i) => <MetricInput key={i} cat="schedule_metrics" idx={i} label={m} />)}
                         </div>
                     )}
 
                     {step === 4 && (
                         <div>
                             <h3 className="text-lg font-bold mb-4">B.2.3 Quality Performance (20%)</h3>
-                            <div className="space-y-3 max-h-96 overflow-y-auto">
-                                {['Defect Density', 'Material Test Pass Rate', 'Quality Compliance', 'Technology Adoption', 'Rework Costs Ratio'].map((m, i) => (
-                                    <div key={i} className="metric-row">
-                                        <label className="block text-sm font-medium mb-2">{m}</label>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <div>
-                                                <input type="text" placeholder="Result (numbers)" value={data.quality_metrics[`${i}_result`] || ''} onChange={(e) => handleMetricChange('quality_metrics', `${i}_result`, e.target.value)} onBlur={(e) => { if (e.target.value && !/^[0-9.]*$/.test(e.target.value)) e.target.className = 'w-full px-3 py-2 border-2 border-red-600 bg-red-50 rounded text-sm'; else e.target.className = 'w-full px-3 py-2 border border-gray-300 rounded text-sm'; }} className="w-full px-3 py-2 border border-gray-300 rounded text-sm" />
-                                                {data.quality_metrics[`${i}_result`] && !/^[0-9.]*$/.test(data.quality_metrics[`${i}_result`]) && <p className="error-text">❌ Must be a number</p>}
-                                            </div>
-                                            <input type="text" placeholder="Source" value={data.quality_metrics[`${i}_source`] || ''} onChange={(e) => handleMetricChange('quality_metrics', `${i}_source`, e.target.value)} className="px-3 py-2 border border-gray-300 rounded text-sm" />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                            {['Defect Density', 'Material Test Pass Rate', 'Quality Compliance', 'Technology Adoption', 'Rework Costs Ratio'].map((m, i) => <MetricInput key={i} cat="quality_metrics" idx={i} label={m} />)}
                         </div>
                     )}
 
                     {step === 5 && (
                         <div>
                             <h3 className="text-lg font-bold mb-4">B.2.4 Local Content & Job Creation (25%)</h3>
-                            <div className="space-y-3 max-h-96 overflow-y-auto">
-                                {['Local Workforce', 'Skill Transfer', 'Local Material', 'Sub-contracting', 'Local Procurement', 'Skill Spending', 'Skill Hours', 'Skill Levels', 'Skilled Earnings', 'Semi-skilled Earnings', 'Apprenticeships'].map((m, i) => (
-                                    <div key={i} className="metric-row">
-                                        <label className="block text-sm font-medium mb-2">{m}</label>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <div>
-                                                <input type="text" placeholder="Result (numbers)" value={data.local_content_metrics[`${i}_result`] || ''} onChange={(e) => handleMetricChange('local_content_metrics', `${i}_result`, e.target.value)} onBlur={(e) => { if (e.target.value && !/^[0-9.]*$/.test(e.target.value)) e.target.className = 'w-full px-3 py-2 border-2 border-red-600 bg-red-50 rounded text-sm'; else e.target.className = 'w-full px-3 py-2 border border-gray-300 rounded text-sm'; }} className="w-full px-3 py-2 border border-gray-300 rounded text-sm" />
-                                                {data.local_content_metrics[`${i}_result`] && !/^[0-9.]*$/.test(data.local_content_metrics[`${i}_result`]) && <p className="error-text">❌ Must be a number</p>}
-                                            </div>
-                                            <input type="text" placeholder="Source" value={data.local_content_metrics[`${i}_source`] || ''} onChange={(e) => handleMetricChange('local_content_metrics', `${i}_source`, e.target.value)} className="px-3 py-2 border border-gray-300 rounded text-sm" />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                            {['Local Workforce Intensity', 'Skill Transfer Ratio', 'Local Material (200km)', 'Sub-contracting Ratio', 'Local Procurement %', 'Skill Development Spending', 'Skill Development Hours', 'Workforce Skill Levels', 'Avg Skilled Earnings', 'Avg Semi-skilled Earnings', 'Apprenticeships Ratio'].map((m, i) => <MetricInput key={i} cat="local_content_metrics" idx={i} label={m} />)}
                         </div>
                     )}
 
                     {step === 6 && (
                         <div>
                             <h3 className="text-lg font-bold mb-4">B.2.5 Safety & Environmental (15%)</h3>
-                            <div className="space-y-3 max-h-96 overflow-y-auto">
-                                {['Accident Rate', 'Accident Costs', 'PPE', 'Environmental', 'Sustainable Materials', 'Waste Management', 'Female Ratio', 'Youth Ratio'].map((m, i) => (
-                                    <div key={i} className="metric-row">
-                                        <label className="block text-sm font-medium mb-2">{m}</label>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <div>
-                                                <input type="text" placeholder="Result (numbers)" value={data.safety_metrics[`${i}_result`] || ''} onChange={(e) => handleMetricChange('safety_metrics', `${i}_result`, e.target.value)} onBlur={(e) => { if (e.target.value && !/^[0-9.]*$/.test(e.target.value)) e.target.className = 'w-full px-3 py-2 border-2 border-red-600 bg-red-50 rounded text-sm'; else e.target.className = 'w-full px-3 py-2 border border-gray-300 rounded text-sm'; }} className="w-full px-3 py-2 border border-gray-300 rounded text-sm" />
-                                                {data.safety_metrics[`${i}_result`] && !/^[0-9.]*$/.test(data.safety_metrics[`${i}_result`]) && <p className="error-text">❌ Must be a number</p>}
-                                            </div>
-                                            <input type="text" placeholder="Source" value={data.safety_metrics[`${i}_source`] || ''} onChange={(e) => handleMetricChange('safety_metrics', `${i}_source`, e.target.value)} className="px-3 py-2 border border-gray-300 rounded text-sm" />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                            {['Accident Incidence Rate', 'Accident Costs Ratio', 'PPE Availability', 'Environmental Compliance', 'Sustainable Materials', 'Waste Management %', 'Female Ratio', 'Youth Ratio'].map((m, i) => <MetricInput key={i} cat="safety_metrics" idx={i} label={m} />)}
                         </div>
                     )}
 
@@ -323,8 +256,48 @@
                     <div className="flex gap-2 mt-8">
                         <button onClick={() => { if (step > 1) setStep(step - 1); else setPage('dashboard'); }} className="flex-1 bg-gray-300 text-gray-800 px-4 py-3 rounded-lg font-bold">← Back</button>
                         <button onClick={saveDraft} className="flex-1 bg-blue-500 text-white px-4 py-3 rounded-lg font-bold">💾 Save</button>
-                        {step < 7 && <button onClick={() => { if (!canProceed()) { setMsg('❌ Please fill all required fields with valid numbers'); } else { setStep(step + 1); setMsg(''); } }} className={`flex-1 px-4 py-3 rounded-lg font-bold text-white ${canProceed() ? 'bg-purple-600 cursor-pointer' : 'bg-gray-400 cursor-not-allowed'}`}>Next →</button>}
-                        {step === 7 && <button onClick={() => { setMsg('✅ Submitted!'); setTimeout(() => setPage('dashboard'), 3500); }} className="flex-1 bg-green-600 text-white px-4 py-3 rounded-lg font-bold">✅ Submit</button>}
+                        {step < 7 && <button onClick={() => setStep(step + 1)} className="flex-1 bg-purple-600 text-white px-4 py-3 rounded-lg font-bold">Next →</button>}
+                        {step === 7 && <button onClick={() => { setMsg('✅ Project submitted successfully!'); setTimeout(() => setPage('dashboard'), 3500); }} className="flex-1 bg-green-600 text-white px-4 py-3 rounded-lg font-bold">✅ Submit</button>}
+                    </div>
+                </div>
+            );
+        }
+
+        function FirmForm({ token, setPage }) {
+            const [step, setStep] = useState(1);
+            const [msg, setMsg] = useState('');
+            const [draftId, setDraftId] = useState('');
+            const [data, setData] = useState({ firm_name: '', financial_metrics: {}, competitiveness_metrics: {}, customer_metrics: {}, tech_metrics: {}, communication_metrics: {}, collaboration_metrics: {}, employee_metrics: {}, product_metrics: {} });
+
+            const saveDraft = async () => {
+                const id = draftId || 'draft_' + Date.now();
+                try {
+                    await fetch('/api/save-firm-draft', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify({ draft_id: id, firm_data: data })
+                    });
+                    setDraftId(id);
+                    localStorage.setItem('firmDraftId', id);
+                    setMsg(`✅ Saved! ID: ${id}`);
+                    setTimeout(() => setPage('dashboard'), 2000);
+                } catch (e) {
+                    setMsg('❌ Failed');
+                }
+            };
+
+            return (
+                <div className="bg-white p-8 rounded-lg max-w-2xl">
+                    <button onClick={() => setPage('dashboard')} className="text-gray-500 text-2xl mb-4">← Back</button>
+                    {draftId && <div className="draft-box"><p><strong>📝 Draft:</strong> {draftId}</p></div>}
+                    {msg && <div className="mb-4 p-3 bg-blue-50 text-blue-800 rounded">{msg}</div>}
+                    <h2 className="text-2xl font-bold mb-6">Part C: Firm Benchmarking</h2>
+                    <div><label className="text-sm font-medium">Firm Name</label><input type="text" value={data.firm_name} onChange={(e) => setData({...data, firm_name: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-lg" /></div>
+                    <p className="text-gray-600 mt-6 mb-6">Firm metrics coming soon - Step 2 of 9</p>
+                    <div className="flex gap-2">
+                        <button onClick={() => setPage('dashboard')} className="flex-1 bg-gray-300 text-gray-800 px-4 py-3 rounded-lg font-bold">← Back</button>
+                        <button onClick={saveDraft} className="flex-1 bg-blue-500 text-white px-4 py-3 rounded-lg font-bold">💾 Save</button>
+                        <button className="flex-1 bg-green-600 text-white px-4 py-3 rounded-lg font-bold">Next →</button>
                     </div>
                 </div>
             );

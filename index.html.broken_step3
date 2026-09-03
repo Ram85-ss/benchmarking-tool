@@ -35,7 +35,7 @@
                 <div className="min-h-screen bg-gradient-to-r from-purple-600 to-purple-700 p-8">
                     <div className="max-w-4xl mx-auto">
                         {page === 'auth' && <AuthPage setToken={setToken} />}
-                        {page === 'dashboard' && user && <Dashboard user={user} setPage={setPage} setToken={setToken} setUser={setUser} />}
+                        {page === 'dashboard' && user && <Dashboard user={user} setPage={setPage} setToken={setToken} />}
                         {page === 'project' && token && <ProjectForm token={token} setPage={setPage} />}
                     </div>
                 </div>
@@ -85,12 +85,12 @@
             );
         }
 
-        function Dashboard({ user, setPage, setToken, setUser }) {
+        function Dashboard({ user, setPage, setToken }) {
             return (
                 <div className="bg-white p-8 rounded-lg max-w-2xl">
                     <div className="flex justify-between mb-6">
                         <h1 className="text-2xl font-bold">Dashboard</h1>
-                        <button onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('projectDraftId'); localStorage.removeItem('firmDraftId'); setToken(null); setUser(null); setPage('auth'); }} className="bg-red-600 text-white px-4 py-2 rounded-lg">Logout</button>
+                        <button onClick={() => { localStorage.removeItem('token'); setToken(null); }} className="bg-red-600 text-white px-4 py-2 rounded-lg">Logout</button>
                     </div>
                     <p className="text-gray-600 mb-6">Welcome, {user.username}!</p>
                     <button onClick={() => setPage('project')} className="w-full bg-purple-600 text-white px-6 py-4 rounded-lg font-bold text-lg">📝 Project Form (7 Steps)</button>
@@ -124,29 +124,6 @@
                     const str = value.toString().trim();
                     return /^[0-9.]*$/.test(str) && (str.match(/\./g) || []).length <= 1;
                 }
-                return true;
-            };
-
-            const validateMetrics = (cat) => {
-                const metrics = data[cat];
-                const errors = [];
-                for (let key in metrics) {
-                    if (key.includes('_result') && metrics[key]) {
-                        if (!/^[0-9.]*$/.test(metrics[key])) {
-                            errors.push(key);
-                        }
-                    }
-                }
-                return errors;
-            };
-
-            const canProceed = () => {
-                if (step === 1) return !errors.initial_cost && !errors.duration && data.project_id && data.project_title;
-                if (step === 2) return validateMetrics('cost_metrics').length === 0;
-                if (step === 3) return validateMetrics('schedule_metrics').length === 0;
-                if (step === 4) return validateMetrics('quality_metrics').length === 0;
-                if (step === 5) return validateMetrics('local_content_metrics').length === 0;
-                if (step === 6) return validateMetrics('safety_metrics').length === 0;
                 return true;
             };
 
@@ -222,10 +199,7 @@
                                     <div key={i} className="metric-row">
                                         <label className="block text-sm font-medium mb-2">{m}</label>
                                         <div className="grid grid-cols-2 gap-2">
-                                            <div>
-                                                <input type="text" placeholder="Result (numbers)" value={data.cost_metrics[`${i}_result`] || ''} onChange={(e) => handleMetricChange('cost_metrics', `${i}_result`, e.target.value)} onBlur={(e) => { if (e.target.value && !/^[0-9.]*$/.test(e.target.value)) e.target.className = 'w-full px-3 py-2 border-2 border-red-600 bg-red-50 rounded text-sm'; else e.target.className = 'w-full px-3 py-2 border border-gray-300 rounded text-sm'; }} className="w-full px-3 py-2 border border-gray-300 rounded text-sm" />
-                                                {data.cost_metrics[`${i}_result`] && !/^[0-9.]*$/.test(data.cost_metrics[`${i}_result`]) && <p className="error-text">❌ Must be a number</p>}
-                                            </div>
+                                            <input type="text" placeholder="Result" value={data.cost_metrics[`${i}_result`] || ''} onChange={(e) => handleMetricChange('cost_metrics', `${i}_result`, e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded text-sm" />
                                             <input type="text" placeholder="Source" value={data.cost_metrics[`${i}_source`] || ''} onChange={(e) => handleMetricChange('cost_metrics', `${i}_source`, e.target.value)} className="px-3 py-2 border border-gray-300 rounded text-sm" />
                                         </div>
                                     </div>
@@ -242,10 +216,7 @@
                                     <div key={i} className="metric-row">
                                         <label className="block text-sm font-medium mb-2">{m}</label>
                                         <div className="grid grid-cols-2 gap-2">
-                                            <div>
-                                                <input type="text" placeholder="Result (numbers)" value={data.schedule_metrics[`${i}_result`] || ''} onChange={(e) => handleMetricChange('schedule_metrics', `${i}_result`, e.target.value)} onBlur={(e) => { if (e.target.value && !/^[0-9.]*$/.test(e.target.value)) e.target.className = 'w-full px-3 py-2 border-2 border-red-600 bg-red-50 rounded text-sm'; else e.target.className = 'w-full px-3 py-2 border border-gray-300 rounded text-sm'; }} className="w-full px-3 py-2 border border-gray-300 rounded text-sm" />
-                                                {data.schedule_metrics[`${i}_result`] && !/^[0-9.]*$/.test(data.schedule_metrics[`${i}_result`]) && <p className="error-text">❌ Must be a number</p>}
-                                            </div>
+                                            <input type="text" placeholder="Result" value={data.schedule_metrics[`${i}_result`] || ''} onChange={(e) => handleMetricChange('schedule_metrics', `${i}_result`, e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded text-sm" />
                                             <input type="text" placeholder="Source" value={data.schedule_metrics[`${i}_source`] || ''} onChange={(e) => handleMetricChange('schedule_metrics', `${i}_source`, e.target.value)} className="px-3 py-2 border border-gray-300 rounded text-sm" />
                                         </div>
                                     </div>
@@ -262,10 +233,7 @@
                                     <div key={i} className="metric-row">
                                         <label className="block text-sm font-medium mb-2">{m}</label>
                                         <div className="grid grid-cols-2 gap-2">
-                                            <div>
-                                                <input type="text" placeholder="Result (numbers)" value={data.quality_metrics[`${i}_result`] || ''} onChange={(e) => handleMetricChange('quality_metrics', `${i}_result`, e.target.value)} onBlur={(e) => { if (e.target.value && !/^[0-9.]*$/.test(e.target.value)) e.target.className = 'w-full px-3 py-2 border-2 border-red-600 bg-red-50 rounded text-sm'; else e.target.className = 'w-full px-3 py-2 border border-gray-300 rounded text-sm'; }} className="w-full px-3 py-2 border border-gray-300 rounded text-sm" />
-                                                {data.quality_metrics[`${i}_result`] && !/^[0-9.]*$/.test(data.quality_metrics[`${i}_result`]) && <p className="error-text">❌ Must be a number</p>}
-                                            </div>
+                                            <input type="text" placeholder="Result" value={data.quality_metrics[`${i}_result`] || ''} onChange={(e) => handleMetricChange('quality_metrics', `${i}_result`, e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded text-sm" />
                                             <input type="text" placeholder="Source" value={data.quality_metrics[`${i}_source`] || ''} onChange={(e) => handleMetricChange('quality_metrics', `${i}_source`, e.target.value)} className="px-3 py-2 border border-gray-300 rounded text-sm" />
                                         </div>
                                     </div>
@@ -282,10 +250,7 @@
                                     <div key={i} className="metric-row">
                                         <label className="block text-sm font-medium mb-2">{m}</label>
                                         <div className="grid grid-cols-2 gap-2">
-                                            <div>
-                                                <input type="text" placeholder="Result (numbers)" value={data.local_content_metrics[`${i}_result`] || ''} onChange={(e) => handleMetricChange('local_content_metrics', `${i}_result`, e.target.value)} onBlur={(e) => { if (e.target.value && !/^[0-9.]*$/.test(e.target.value)) e.target.className = 'w-full px-3 py-2 border-2 border-red-600 bg-red-50 rounded text-sm'; else e.target.className = 'w-full px-3 py-2 border border-gray-300 rounded text-sm'; }} className="w-full px-3 py-2 border border-gray-300 rounded text-sm" />
-                                                {data.local_content_metrics[`${i}_result`] && !/^[0-9.]*$/.test(data.local_content_metrics[`${i}_result`]) && <p className="error-text">❌ Must be a number</p>}
-                                            </div>
+                                            <input type="text" placeholder="Result" value={data.local_content_metrics[`${i}_result`] || ''} onChange={(e) => handleMetricChange('local_content_metrics', `${i}_result`, e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded text-sm" />
                                             <input type="text" placeholder="Source" value={data.local_content_metrics[`${i}_source`] || ''} onChange={(e) => handleMetricChange('local_content_metrics', `${i}_source`, e.target.value)} className="px-3 py-2 border border-gray-300 rounded text-sm" />
                                         </div>
                                     </div>
@@ -302,10 +267,7 @@
                                     <div key={i} className="metric-row">
                                         <label className="block text-sm font-medium mb-2">{m}</label>
                                         <div className="grid grid-cols-2 gap-2">
-                                            <div>
-                                                <input type="text" placeholder="Result (numbers)" value={data.safety_metrics[`${i}_result`] || ''} onChange={(e) => handleMetricChange('safety_metrics', `${i}_result`, e.target.value)} onBlur={(e) => { if (e.target.value && !/^[0-9.]*$/.test(e.target.value)) e.target.className = 'w-full px-3 py-2 border-2 border-red-600 bg-red-50 rounded text-sm'; else e.target.className = 'w-full px-3 py-2 border border-gray-300 rounded text-sm'; }} className="w-full px-3 py-2 border border-gray-300 rounded text-sm" />
-                                                {data.safety_metrics[`${i}_result`] && !/^[0-9.]*$/.test(data.safety_metrics[`${i}_result`]) && <p className="error-text">❌ Must be a number</p>}
-                                            </div>
+                                            <input type="text" placeholder="Result" value={data.safety_metrics[`${i}_result`] || ''} onChange={(e) => handleMetricChange('safety_metrics', `${i}_result`, e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded text-sm" />
                                             <input type="text" placeholder="Source" value={data.safety_metrics[`${i}_source`] || ''} onChange={(e) => handleMetricChange('safety_metrics', `${i}_source`, e.target.value)} className="px-3 py-2 border border-gray-300 rounded text-sm" />
                                         </div>
                                     </div>
@@ -323,7 +285,7 @@
                     <div className="flex gap-2 mt-8">
                         <button onClick={() => { if (step > 1) setStep(step - 1); else setPage('dashboard'); }} className="flex-1 bg-gray-300 text-gray-800 px-4 py-3 rounded-lg font-bold">← Back</button>
                         <button onClick={saveDraft} className="flex-1 bg-blue-500 text-white px-4 py-3 rounded-lg font-bold">💾 Save</button>
-                        {step < 7 && <button onClick={() => { if (!canProceed()) { setMsg('❌ Please fill all required fields with valid numbers'); } else { setStep(step + 1); setMsg(''); } }} className={`flex-1 px-4 py-3 rounded-lg font-bold text-white ${canProceed() ? 'bg-purple-600 cursor-pointer' : 'bg-gray-400 cursor-not-allowed'}`}>Next →</button>}
+                        {step < 7 && <button onClick={() => setStep(step + 1)} className="flex-1 bg-purple-600 text-white px-4 py-3 rounded-lg font-bold">Next →</button>}
                         {step === 7 && <button onClick={() => { setMsg('✅ Submitted!'); setTimeout(() => setPage('dashboard'), 3500); }} className="flex-1 bg-green-600 text-white px-4 py-3 rounded-lg font-bold">✅ Submit</button>}
                     </div>
                 </div>
