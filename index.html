@@ -109,13 +109,14 @@
             });
 
             useEffect(() => {
-                const saved = localStorage.getItem('projectDraftId');
-                if (saved) {
-                    fetch(`/api/load-project-draft/${saved}`, { headers: { 'Authorization': `Bearer ${token}` } })
-                        .then(r => r.json())
-                        .then(d => { setData(d.project_data); setDraftId(saved); setMsg('✅ Draft loaded!'); setTimeout(() => setMsg(''), 3000); })
-                        .catch(e => console.log('No draft'));
-                }
+                // Draft auto-load disabled for testing
+                // const saved = localStorage.getItem('projectDraftId');
+                // if (saved) {
+                //     fetch(`/api/load-project-draft/${saved}`, { headers: { 'Authorization': `Bearer ${token}` } })
+                //         .then(r => r.json())
+                //         .then(d => { setData(d.project_data); setDraftId(saved); setMsg('✅ Draft loaded!'); setTimeout(() => setMsg(''), 3000); })
+                //         .catch(e => console.log('No draft'));
+                // }
             }, [token]);
 
             const validateField = (field, value) => {
@@ -324,7 +325,34 @@
                         <button onClick={() => { if (step > 1) setStep(step - 1); else setPage('dashboard'); }} className="flex-1 bg-gray-300 text-gray-800 px-4 py-3 rounded-lg font-bold">← Back</button>
                         <button onClick={saveDraft} className="flex-1 bg-blue-500 text-white px-4 py-3 rounded-lg font-bold">💾 Save</button>
                         {step < 7 && <button onClick={() => { if (!canProceed()) { setMsg('❌ Please fill all required fields with valid numbers'); } else { setStep(step + 1); setMsg(''); } }} className={`flex-1 px-4 py-3 rounded-lg font-bold text-white ${canProceed() ? 'bg-purple-600 cursor-pointer' : 'bg-gray-400 cursor-not-allowed'}`}>Next →</button>}
-                        {step === 7 && <button onClick={() => { setMsg('✅ Submitted!'); setTimeout(() => setPage('dashboard'), 3500); }} className="flex-1 bg-green-600 text-white px-4 py-3 rounded-lg font-bold">✅ Submit</button>}
+                        {step === 7 && <button onClick={async () => {
+                        const submitData = {
+                            ...data,
+                            cost_performance: data.cost_metrics,
+                            schedule_performance: data.schedule_metrics,
+                            quality_performance: data.quality_metrics,
+                            local_content_performance: data.local_content_metrics,
+                            safety_env_performance: data.safety_metrics
+                        };
+                        console.log('Submit clicked!');
+                        console.log('Data to submit:', JSON.stringify(submitData, null, 2));
+                        try {
+                            const res = await fetch('/api/submit-project', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                                body: JSON.stringify(submitData)
+                            });
+                            if (res.ok) {
+                                localStorage.removeItem('projectDraftId');
+                                setMsg('✅ Project submitted successfully!');
+                                setTimeout(() => setPage('dashboard'), 3500);
+                            } else {
+                                setMsg('❌ Submission failed');
+                            }
+                        } catch (e) {
+                            setMsg('❌ Error: ' + e.message);
+                        }
+                    }} className="flex-1 bg-green-600 text-white px-4 py-3 rounded-lg font-bold">✅ Submit</button>}
                     </div>
                 </div>
             );

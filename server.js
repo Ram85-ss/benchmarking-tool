@@ -275,7 +275,7 @@ app.get('/api/user/firm-drafts', verifyToken, (req, res) => {
 
 // ============ ADMIN ENDPOINTS (NO AUTH - KEPT PUBLIC) ============
 app.get('/api/admin/projects', (req, res) => {
-  db.all(`SELECT p.id, u.username, p.project_id, p.project_title, p.implementing_agency, p.funding_agency, p.initial_cost, p.submission_date 
+  db.all(`SELECT p.id, u.username, p.project_id, p.project_title, p.implementing_agency, p.funding_agency, p.implementing_firm, p.initial_cost, p.start_date, p.duration, p.cost_performance, p.schedule_performance, p.quality_performance, p.local_content_performance, p.safety_env_performance, p.submission_date 
           FROM project_submissions p 
           JOIN users u ON p.user_id = u.user_id 
           ORDER BY p.submission_date DESC`, (err, rows) => {

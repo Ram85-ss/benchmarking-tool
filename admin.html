@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - Benchmarking Tool</title>
     <script src="https://cdn.tailwindcss.com"></script>
+
     <style>
         body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -72,6 +73,9 @@
                     <button onclick="downloadJSON('projects')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
                         ⬇️ Export JSON
                     </button>
+                    <button onclick="downloadCSV('projects')" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg ml-2">
+                        📊 Export CSV
+                    </button>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full">
@@ -99,6 +103,9 @@
                     <h2 class="text-2xl font-bold text-gray-800">Firm Level Submissions</h2>
                     <button onclick="downloadJSON('firms')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
                         ⬇️ Export JSON
+                    </button>
+                    <button onclick="downloadCSV('firms')" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg ml-2">
+                        📊 Export CSV
                     </button>
                 </div>
                 <div class="overflow-x-auto">
@@ -271,19 +278,33 @@
                         <p><strong>Agency:</strong> ${project.implementing_agency}</p>
                         <p><strong>Firm:</strong> ${project.implementing_firm}</p>
                         <p><strong>Initial Cost:</strong> $${parseFloat(project.initial_cost).toLocaleString()}</p>
+                        <p><strong>Start Date:</strong> ${new Date(project.start_date).toLocaleDateString()}</p>
                         <p><strong>Duration:</strong> ${project.duration} years</p>
                     </div>
                     <div>
-                        <h3 class="font-bold text-gray-800 mt-4">Performance Data</h3>
-                        <pre class="bg-gray-100 p-3 rounded text-xs overflow-x-auto">
-${JSON.stringify({
-  cost: project.cost_performance,
-  schedule: project.schedule_performance,
-  quality: project.quality_performance,
-  local_content: project.local_content_performance,
-  safety: project.safety_env_performance
-}, null, 2)}
-                        </pre>
+                        <h3 class="font-bold text-gray-800 mt-4">Performance Metrics (20% each)</h3>
+                        <div class="bg-blue-50 p-4 rounded-lg space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="font-semibold text-gray-700">📊 Cost Performance (20%):</span>
+                                <span class="bg-blue-200 text-blue-800 px-3 py-1 rounded text-sm font-mono">${project.cost_performance ? JSON.parse(project.cost_performance)['0_result'] || 'N/A' : 'N/A'}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="font-semibold text-gray-700">⏱️ Schedule Performance (20%):</span>
+                                <span class="bg-green-200 text-green-800 px-3 py-1 rounded text-sm font-mono">${project.schedule_performance ? JSON.parse(project.schedule_performance)['0_result'] || 'N/A' : 'N/A'}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="font-semibold text-gray-700">✓ Quality Performance (20%):</span>
+                                <span class="bg-purple-200 text-purple-800 px-3 py-1 rounded text-sm font-mono">${project.quality_performance ? JSON.parse(project.quality_performance)['0_result'] || 'N/A' : 'N/A'}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="font-semibold text-gray-700">👥 Local Content & Jobs (25%):</span>
+                                <span class="bg-yellow-200 text-yellow-800 px-3 py-1 rounded text-sm font-mono">${project.local_content_performance ? JSON.parse(project.local_content_performance)['0_result'] || 'N/A' : 'N/A'}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="font-semibold text-gray-700">🛡️ Safety & Environment (15%):</span>
+                                <span class="bg-red-200 text-red-800 px-3 py-1 rounded text-sm font-mono">${project.safety_env_performance ? JSON.parse(project.safety_env_performance)['0_result'] || 'N/A' : 'N/A'}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
@@ -328,6 +349,46 @@ ${JSON.stringify({
 
         function closeModal() {
             document.getElementById('detailModal').classList.add('hidden');
+        }
+
+        function downloadCSV(type) {
+            const data = type === 'projects' ? projectsData : firmsData;
+            if (data.length === 0) {
+                alert('No data to export!');
+                return;
+            }
+            
+            // Get headers from first object
+            const headers = Object.keys(data[0]);
+            
+            // Create CSV header
+            let csv = headers.join(',') + '\n';
+            
+            // Add data rows
+            data.forEach(row => {
+                const values = headers.map(header => {
+                    let value = row[header];
+                    if (value === null || value === undefined) return '';
+                    if (typeof value === 'object') value = JSON.stringify(value);
+                    // Escape commas and quotes
+                    if (String(value).includes(',') || String(value).includes('"')) {
+                        value = '"' + String(value).replace(/"/g, '""') + '"';
+                    }
+                    return value;
+                });
+                csv += values.join(',') + '\n';
+            });
+            
+            // Create download link
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${type}_submissions_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
         }
 
         function downloadJSON(type) {
