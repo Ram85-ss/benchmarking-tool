@@ -287,7 +287,7 @@ app.get('/api/admin/projects', (req, res) => {
 });
 
 app.get('/api/admin/firms', (req, res) => {
-  db.all(`SELECT f.id, u.username, f.firm_name, f.submission_date 
+  db.all(`SELECT f.id, u.username, f.firm_name, f.financial_performance, f.competitiveness, f.customer_satisfaction, f.technology_advancement, f.communication_framework, f.collaboration, f.employee_satisfaction, f.product_orientation, f.submission_date 
           FROM firm_submissions f 
           JOIN users u ON f.user_id = u.user_id 
           ORDER BY f.submission_date DESC`, (err, rows) => {

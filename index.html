@@ -37,6 +37,7 @@
                         {page === 'auth' && <AuthPage setToken={setToken} />}
                         {page === 'dashboard' && user && <Dashboard user={user} setPage={setPage} setToken={setToken} setUser={setUser} />}
                         {page === 'project' && token && <ProjectForm token={token} setPage={setPage} />}
+                        {page === 'firm' && token && <FirmForm token={token} setPage={setPage} />}
                     </div>
                 </div>
             );
@@ -78,7 +79,7 @@
                         )}
                         <input type="email" placeholder="Email" value={form.email} onChange={(e) => setForm({...form, email: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-lg" required />
                         <input type="password" placeholder="Password" value={form.password} onChange={(e) => setForm({...form, password: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-lg" required />
-                        <button type="submit" className="w-full bg-purple-600 text-white py-2 rounded-lg font-bold">Sign In / Register</button>
+                        <button type="submit" className="w-full bg-purple-600 text-white py-2 rounded-lg font-bold">Sign In</button>
                     </form>
                     <p className="text-center mt-4"><button onClick={() => setMode(mode === 'login' ? 'register' : 'login')} className="text-purple-600 font-bold">{mode === 'login' ? 'Create Account' : 'Have Account?'}</button></p>
                 </div>
@@ -93,7 +94,10 @@
                         <button onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('projectDraftId'); localStorage.removeItem('firmDraftId'); setToken(null); setUser(null); setPage('auth'); }} className="bg-red-600 text-white px-4 py-2 rounded-lg">Logout</button>
                     </div>
                     <p className="text-gray-600 mb-6">Welcome, {user.username}!</p>
-                    <button onClick={() => setPage('project')} className="w-full bg-purple-600 text-white px-6 py-4 rounded-lg font-bold text-lg">📝 Project Form (7 Steps)</button>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <button onClick={() => setPage('project')} className="bg-purple-600 text-white px-6 py-4 rounded-lg font-bold text-lg">📝 Project (7 Steps)</button>
+                        <button onClick={() => setPage('firm')} className="bg-blue-600 text-white px-6 py-4 rounded-lg font-bold text-lg">🏢 Firm (9 Steps)</button>
+                    </div>
                 </div>
             );
         }
@@ -109,14 +113,13 @@
             });
 
             useEffect(() => {
-                // Draft auto-load disabled for testing
-                // const saved = localStorage.getItem('projectDraftId');
-                // if (saved) {
-                //     fetch(`/api/load-project-draft/${saved}`, { headers: { 'Authorization': `Bearer ${token}` } })
-                //         .then(r => r.json())
-                //         .then(d => { setData(d.project_data); setDraftId(saved); setMsg('✅ Draft loaded!'); setTimeout(() => setMsg(''), 3000); })
-                //         .catch(e => console.log('No draft'));
-                // }
+                const saved = localStorage.getItem('projectDraftId');
+                if (saved) {
+                    fetch(`/api/load-project-draft/${saved}`, { headers: { 'Authorization': `Bearer ${token}` } })
+                        .then(r => r.json())
+                        .then(d => { setData(d.project_data); setDraftId(saved); setMsg('✅ Draft loaded!'); setTimeout(() => setMsg(''), 3000); })
+                        .catch(e => console.log('No draft'));
+                }
             }, [token]);
 
             const validateField = (field, value) => {
@@ -125,29 +128,6 @@
                     const str = value.toString().trim();
                     return /^[0-9.]*$/.test(str) && (str.match(/\./g) || []).length <= 1;
                 }
-                return true;
-            };
-
-            const validateMetrics = (cat) => {
-                const metrics = data[cat];
-                const errors = [];
-                for (let key in metrics) {
-                    if (key.includes('_result') && metrics[key]) {
-                        if (!/^[0-9.]*$/.test(metrics[key])) {
-                            errors.push(key);
-                        }
-                    }
-                }
-                return errors;
-            };
-
-            const canProceed = () => {
-                if (step === 1) return !errors.initial_cost && !errors.duration && data.project_id && data.project_title;
-                if (step === 2) return validateMetrics('cost_metrics').length === 0;
-                if (step === 3) return validateMetrics('schedule_metrics').length === 0;
-                if (step === 4) return validateMetrics('quality_metrics').length === 0;
-                if (step === 5) return validateMetrics('local_content_metrics').length === 0;
-                if (step === 6) return validateMetrics('safety_metrics').length === 0;
                 return true;
             };
 
@@ -171,6 +151,29 @@
                 return val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
             };
 
+            const validateMetrics = (cat) => {
+                const metrics = data[cat];
+                const errors = [];
+                for (let key in metrics) {
+                    if (key.includes('_result') && metrics[key]) {
+                        if (!/^[0-9.]*$/.test(metrics[key])) {
+                            errors.push(key);
+                        }
+                    }
+                }
+                return errors;
+            };
+
+            const canProceed = () => {
+                if (step === 1) return data.project_id && data.project_title;
+                if (step === 2) return validateMetrics('cost_metrics').length === 0;
+                if (step === 3) return validateMetrics('schedule_metrics').length === 0;
+                if (step === 4) return validateMetrics('quality_metrics').length === 0;
+                if (step === 5) return validateMetrics('local_content_metrics').length === 0;
+                if (step === 6) return validateMetrics('safety_metrics').length === 0;
+                return true;
+            };
+
             const saveDraft = async () => {
                 const id = draftId || 'draft_' + Date.now();
                 try {
@@ -181,7 +184,7 @@
                     });
                     setDraftId(id);
                     localStorage.setItem('projectDraftId', id);
-                    setMsg(`✅ Draft saved!`);
+                    setMsg('✅ Draft saved!');
                     setTimeout(() => setPage('dashboard'), 2000);
                 } catch (e) {
                     setMsg('❌ Failed');
@@ -277,7 +280,7 @@
 
                     {step === 5 && (
                         <div>
-                            <h3 className="text-lg font-bold mb-4">B.2.4 Local Content & Job Creation (25%)</h3>
+                            <h3 className="text-lg font-bold mb-4">B.2.4 Local Content (25%)</h3>
                             <div className="space-y-3 max-h-96 overflow-y-auto">
                                 {['Local Workforce', 'Skill Transfer', 'Local Material', 'Sub-contracting', 'Local Procurement', 'Skill Spending', 'Skill Hours', 'Skill Levels', 'Skilled Earnings', 'Semi-skilled Earnings', 'Apprenticeships'].map((m, i) => (
                                     <div key={i} className="metric-row">
@@ -297,7 +300,7 @@
 
                     {step === 6 && (
                         <div>
-                            <h3 className="text-lg font-bold mb-4">B.2.5 Safety & Environmental (15%)</h3>
+                            <h3 className="text-lg font-bold mb-4">B.2.5 Safety & Environment (15%)</h3>
                             <div className="space-y-3 max-h-96 overflow-y-auto">
                                 {['Accident Rate', 'Accident Costs', 'PPE', 'Environmental', 'Sustainable Materials', 'Waste Management', 'Female Ratio', 'Youth Ratio'].map((m, i) => (
                                     <div key={i} className="metric-row">
@@ -324,35 +327,266 @@
                     <div className="flex gap-2 mt-8">
                         <button onClick={() => { if (step > 1) setStep(step - 1); else setPage('dashboard'); }} className="flex-1 bg-gray-300 text-gray-800 px-4 py-3 rounded-lg font-bold">← Back</button>
                         <button onClick={saveDraft} className="flex-1 bg-blue-500 text-white px-4 py-3 rounded-lg font-bold">💾 Save</button>
-                        {step < 7 && <button onClick={() => { if (!canProceed()) { setMsg('❌ Please fill all required fields with valid numbers'); } else { setStep(step + 1); setMsg(''); } }} className={`flex-1 px-4 py-3 rounded-lg font-bold text-white ${canProceed() ? 'bg-purple-600 cursor-pointer' : 'bg-gray-400 cursor-not-allowed'}`}>Next →</button>}
-                        {step === 7 && <button onClick={async () => {
-                        const submitData = {
-                            ...data,
-                            cost_performance: data.cost_metrics,
-                            schedule_performance: data.schedule_metrics,
-                            quality_performance: data.quality_metrics,
-                            local_content_performance: data.local_content_metrics,
-                            safety_env_performance: data.safety_metrics
-                        };
-                        console.log('Submit clicked!');
-                        console.log('Data to submit:', JSON.stringify(submitData, null, 2));
-                        try {
-                            const res = await fetch('/api/submit-project', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                                body: JSON.stringify(submitData)
-                            });
-                            if (res.ok) {
-                                localStorage.removeItem('projectDraftId');
-                                setMsg('✅ Project submitted successfully!');
-                                setTimeout(() => setPage('dashboard'), 3500);
-                            } else {
-                                setMsg('❌ Submission failed');
-                            }
-                        } catch (e) {
-                            setMsg('❌ Error: ' + e.message);
+                        {step < 7 && <button onClick={() => { if (!canProceed()) { setMsg('❌ Please fill all required fields'); } else { setStep(step + 1); setMsg(''); } }} className={`flex-1 px-4 py-3 rounded-lg font-bold text-white ${canProceed() ? 'bg-purple-600 cursor-pointer' : 'bg-gray-400 cursor-not-allowed'}`}>Next →</button>}
+                        {step === 7 && <button onClick={async () => { const submitData = {...data, cost_performance: data.cost_metrics, schedule_performance: data.schedule_metrics, quality_performance: data.quality_metrics, local_content_performance: data.local_content_metrics, safety_env_performance: data.safety_metrics }; try { const res = await fetch('/api/submit-project', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(submitData) }); if (res.ok) { localStorage.removeItem('projectDraftId'); setMsg('✅ Submitted!'); setTimeout(() => setPage('dashboard'), 3500); } } catch (e) { setMsg('❌ Error'); } }} className="flex-1 bg-green-600 text-white px-4 py-3 rounded-lg font-bold">✅ Submit</button>}
+                    </div>
+                </div>
+            );
+        }
+
+        function FirmForm({ token, setPage }) {
+            const [step, setStep] = useState(1);
+            const [msg, setMsg] = useState('');
+            const [draftId, setDraftId] = useState('');
+            const [data, setData] = useState({ 
+                firm_name: '', 
+                financial_metrics: {}, 
+                competitiveness_metrics: {}, 
+                customer_metrics: {}, 
+                tech_metrics: {}, 
+                communication_metrics: {}, 
+                collaboration_metrics: {}, 
+                employee_metrics: {}, 
+                product_metrics: {} 
+            });
+
+            useEffect(() => {
+                const saved = localStorage.getItem('firmDraftId');
+                if (saved) {
+                    fetch(`/api/load-firm-draft/${saved}`, { headers: { 'Authorization': `Bearer ${token}` } })
+                        .then(r => r.json())
+                        .then(d => { setData(d.firm_data); setDraftId(saved); setMsg('✅ Draft loaded!'); setTimeout(() => setMsg(''), 3000); })
+                        .catch(e => console.log('No draft'));
+                }
+            }, [token]);
+
+            const handleMetricChange = (cat, key, val) => {
+                setData({...data, [cat]: {...data[cat], [key]: val}});
+            };
+
+            const validateMetrics = (cat) => {
+                const metrics = data[cat];
+                const errors = [];
+                for (let key in metrics) {
+                    if (key.includes('_result') && metrics[key]) {
+                        if (!/^[0-9.]*$/.test(metrics[key])) {
+                            errors.push(key);
                         }
-                    }} className="flex-1 bg-green-600 text-white px-4 py-3 rounded-lg font-bold">✅ Submit</button>}
+                    }
+                }
+                return errors;
+            };
+
+            const canProceed = () => {
+                if (step === 1) return data.firm_name;
+                if (step === 2) return validateMetrics('financial_metrics').length === 0;
+                if (step === 3) return validateMetrics('competitiveness_metrics').length === 0;
+                if (step === 4) return validateMetrics('customer_metrics').length === 0;
+                if (step === 5) return validateMetrics('tech_metrics').length === 0;
+                if (step === 6) return validateMetrics('communication_metrics').length === 0;
+                if (step === 7) return validateMetrics('collaboration_metrics').length === 0;
+                if (step === 8) return validateMetrics('employee_metrics').length === 0 && validateMetrics('product_metrics').length === 0;
+                return true;
+            };
+
+            const saveDraft = async () => {
+                const id = draftId || 'draft_' + Date.now();
+                try {
+                    await fetch('/api/save-firm-draft', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify({ draft_id: id, firm_data: data })
+                    });
+                    setDraftId(id);
+                    localStorage.setItem('firmDraftId', id);
+                    setMsg('✅ Draft saved!');
+                    setTimeout(() => setPage('dashboard'), 2000);
+                } catch (e) {
+                    setMsg('❌ Failed');
+                }
+            };
+
+            const pct = (step / 9) * 100;
+
+            return (
+                <div className="bg-white p-8 rounded-lg max-w-4xl">
+                    <button onClick={() => setPage('dashboard')} className="text-gray-500 text-2xl mb-4">← Back</button>
+                    {draftId && <div className="draft-box"><p><strong>📝 Draft:</strong> {draftId}</p></div>}
+                    {msg && <div className="mb-4 p-3 bg-blue-50 text-blue-800 rounded">{msg}</div>}
+                    
+                    <h2 className="text-2xl font-bold mb-2">Part C: Firm Benchmarking</h2>
+                    <p className="text-gray-600 mb-4">Step {step} of 9</p>
+                    <div className="bg-gray-200 h-2 rounded-full mb-6"><div className="bg-blue-600 h-2 rounded-full" style={{width: pct + '%'}}></div></div>
+
+                    {step === 1 && (
+                        <div><label className="text-sm font-medium">Firm Name</label><input type="text" value={data.firm_name} onChange={(e) => setData({...data, firm_name: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-lg" /></div>
+                    )}
+
+                    {step === 2 && (
+                        <div>
+                            <h3 className="text-lg font-bold mb-4">C.2 Financial Performance (15%)</h3>
+                            <div className="space-y-3 max-h-96 overflow-y-auto">
+                                {['Gross Profit Margin', 'Net Profit Margin', 'Return on Assets', 'Admin Costs Ratio', 'Debt Ratio', 'Working Capital', 'Backlog Profit'].map((m, i) => (
+                                    <div key={i} className="metric-row">
+                                        <label className="block text-sm font-medium mb-2">{m}</label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <input type="text" placeholder="Result (numbers)" value={data.financial_metrics[`${i}_result`] || ''} onChange={(e) => handleMetricChange('financial_metrics', `${i}_result`, e.target.value)} onBlur={(e) => { if (e.target.value && !/^[0-9.]*$/.test(e.target.value)) e.target.className = 'w-full px-3 py-2 border-2 border-red-600 bg-red-50 rounded text-sm'; else e.target.className = 'w-full px-3 py-2 border border-gray-300 rounded text-sm'; }} className="w-full px-3 py-2 border border-gray-300 rounded text-sm" />
+                                                {data.financial_metrics[`${i}_result`] && !/^[0-9.]*$/.test(data.financial_metrics[`${i}_result`]) && <p className="error-text">❌ Must be a number</p>}
+                                            </div>
+                                            <input type="text" placeholder="Source" value={data.financial_metrics[`${i}_source`] || ''} onChange={(e) => handleMetricChange('financial_metrics', `${i}_source`, e.target.value)} className="px-3 py-2 border border-gray-300 rounded text-sm" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {step === 3 && (
+                        <div>
+                            <h3 className="text-lg font-bold mb-4">C.3 Competitiveness (25%)</h3>
+                            <div className="space-y-3 max-h-96 overflow-y-auto">
+                                {['Bid Success Rate', 'Market Surveys', 'CapEX Ratio', 'Tax Compliance', 'Health & Safety', 'Human Capital', 'Training Investment', 'Female Ratio'].map((m, i) => (
+                                    <div key={i} className="metric-row">
+                                        <label className="block text-sm font-medium mb-2">{m}</label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <input type="text" placeholder="Result (numbers)" value={data.competitiveness_metrics[`${i}_result`] || ''} onChange={(e) => handleMetricChange('competitiveness_metrics', `${i}_result`, e.target.value)} onBlur={(e) => { if (e.target.value && !/^[0-9.]*$/.test(e.target.value)) e.target.className = 'w-full px-3 py-2 border-2 border-red-600 bg-red-50 rounded text-sm'; else e.target.className = 'w-full px-3 py-2 border border-gray-300 rounded text-sm'; }} className="w-full px-3 py-2 border border-gray-300 rounded text-sm" />
+                                                {data.competitiveness_metrics[`${i}_result`] && !/^[0-9.]*$/.test(data.competitiveness_metrics[`${i}_result`]) && <p className="error-text">❌ Must be a number</p>}
+                                            </div>
+                                            <input type="text" placeholder="Source" value={data.competitiveness_metrics[`${i}_source`] || ''} onChange={(e) => handleMetricChange('competitiveness_metrics', `${i}_source`, e.target.value)} className="px-3 py-2 border border-gray-300 rounded text-sm" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {step === 4 && (
+                        <div>
+                            <h3 className="text-lg font-bold mb-4">C.4 Customer Satisfaction (10%)</h3>
+                            <div className="space-y-3 max-h-96 overflow-y-auto">
+                                {['Satisfaction Scores', 'Acceptance Rate', 'Complaint Rate'].map((m, i) => (
+                                    <div key={i} className="metric-row">
+                                        <label className="block text-sm font-medium mb-2">{m}</label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <input type="text" placeholder="Result (numbers)" value={data.customer_metrics[`${i}_result`] || ''} onChange={(e) => handleMetricChange('customer_metrics', `${i}_result`, e.target.value)} onBlur={(e) => { if (e.target.value && !/^[0-9.]*$/.test(e.target.value)) e.target.className = 'w-full px-3 py-2 border-2 border-red-600 bg-red-50 rounded text-sm'; else e.target.className = 'w-full px-3 py-2 border border-gray-300 rounded text-sm'; }} className="w-full px-3 py-2 border border-gray-300 rounded text-sm" />
+                                                {data.customer_metrics[`${i}_result`] && !/^[0-9.]*$/.test(data.customer_metrics[`${i}_result`]) && <p className="error-text">❌ Must be a number</p>}
+                                            </div>
+                                            <input type="text" placeholder="Source" value={data.customer_metrics[`${i}_source`] || ''} onChange={(e) => handleMetricChange('customer_metrics', `${i}_source`, e.target.value)} className="px-3 py-2 border border-gray-300 rounded text-sm" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {step === 5 && (
+                        <div>
+                            <h3 className="text-lg font-bold mb-4">C.5 Technology (10%)</h3>
+                            <div className="space-y-3 max-h-96 overflow-y-auto">
+                                {['Tech Investment', 'R&D Investment', 'Digital Skills'].map((m, i) => (
+                                    <div key={i} className="metric-row">
+                                        <label className="block text-sm font-medium mb-2">{m}</label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <input type="text" placeholder="Result (numbers)" value={data.tech_metrics[`${i}_result`] || ''} onChange={(e) => handleMetricChange('tech_metrics', `${i}_result`, e.target.value)} onBlur={(e) => { if (e.target.value && !/^[0-9.]*$/.test(e.target.value)) e.target.className = 'w-full px-3 py-2 border-2 border-red-600 bg-red-50 rounded text-sm'; else e.target.className = 'w-full px-3 py-2 border border-gray-300 rounded text-sm'; }} className="w-full px-3 py-2 border border-gray-300 rounded text-sm" />
+                                                {data.tech_metrics[`${i}_result`] && !/^[0-9.]*$/.test(data.tech_metrics[`${i}_result`]) && <p className="error-text">❌ Must be a number</p>}
+                                            </div>
+                                            <input type="text" placeholder="Source" value={data.tech_metrics[`${i}_source`] || ''} onChange={(e) => handleMetricChange('tech_metrics', `${i}_source`, e.target.value)} className="px-3 py-2 border border-gray-300 rounded text-sm" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {step === 6 && (
+                        <div>
+                            <h3 className="text-lg font-bold mb-4">C.6 Communication (10%)</h3>
+                            <div className="space-y-3 max-h-96 overflow-y-auto">
+                                {['Web Communication', 'Staff Meetings', 'Document Compliance'].map((m, i) => (
+                                    <div key={i} className="metric-row">
+                                        <label className="block text-sm font-medium mb-2">{m}</label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <input type="text" placeholder="Result (numbers)" value={data.communication_metrics[`${i}_result`] || ''} onChange={(e) => handleMetricChange('communication_metrics', `${i}_result`, e.target.value)} onBlur={(e) => { if (e.target.value && !/^[0-9.]*$/.test(e.target.value)) e.target.className = 'w-full px-3 py-2 border-2 border-red-600 bg-red-50 rounded text-sm'; else e.target.className = 'w-full px-3 py-2 border border-gray-300 rounded text-sm'; }} className="w-full px-3 py-2 border border-gray-300 rounded text-sm" />
+                                                {data.communication_metrics[`${i}_result`] && !/^[0-9.]*$/.test(data.communication_metrics[`${i}_result`]) && <p className="error-text">❌ Must be a number</p>}
+                                            </div>
+                                            <input type="text" placeholder="Source" value={data.communication_metrics[`${i}_source`] || ''} onChange={(e) => handleMetricChange('communication_metrics', `${i}_source`, e.target.value)} className="px-3 py-2 border border-gray-300 rounded text-sm" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {step === 7 && (
+                        <div>
+                            <h3 className="text-lg font-bold mb-4">C.7 Collaboration (10%)</h3>
+                            <div className="space-y-3 max-h-96 overflow-y-auto">
+                                {['Teamwork', 'CSR Ratio', 'RFI Time', 'Conflict Resolution'].map((m, i) => (
+                                    <div key={i} className="metric-row">
+                                        <label className="block text-sm font-medium mb-2">{m}</label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <input type="text" placeholder="Result (numbers)" value={data.collaboration_metrics[`${i}_result`] || ''} onChange={(e) => handleMetricChange('collaboration_metrics', `${i}_result`, e.target.value)} onBlur={(e) => { if (e.target.value && !/^[0-9.]*$/.test(e.target.value)) e.target.className = 'w-full px-3 py-2 border-2 border-red-600 bg-red-50 rounded text-sm'; else e.target.className = 'w-full px-3 py-2 border border-gray-300 rounded text-sm'; }} className="w-full px-3 py-2 border border-gray-300 rounded text-sm" />
+                                                {data.collaboration_metrics[`${i}_result`] && !/^[0-9.]*$/.test(data.collaboration_metrics[`${i}_result`]) && <p className="error-text">❌ Must be a number</p>}
+                                            </div>
+                                            <input type="text" placeholder="Source" value={data.collaboration_metrics[`${i}_source`] || ''} onChange={(e) => handleMetricChange('collaboration_metrics', `${i}_source`, e.target.value)} className="px-3 py-2 border border-gray-300 rounded text-sm" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {step === 8 && (
+                        <div>
+                            <h3 className="text-lg font-bold mb-4">C.8 Employee & Product (10% + 10%)</h3>
+                            <div className="space-y-3 max-h-96 overflow-y-auto">
+                                <div className="font-bold text-sm text-purple-700 mb-3">Employee Satisfaction:</div>
+                                {['Incentives', 'Compensation', 'Leave', 'Welfare', 'Satisfaction'].map((m, i) => (
+                                    <div key={i} className="metric-row">
+                                        <label className="block text-sm font-medium mb-2">{m}</label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <input type="text" placeholder="Result (numbers)" value={data.employee_metrics[`${i}_result`] || ''} onChange={(e) => handleMetricChange('employee_metrics', `${i}_result`, e.target.value)} onBlur={(e) => { if (e.target.value && !/^[0-9.]*$/.test(e.target.value)) e.target.className = 'w-full px-3 py-2 border-2 border-red-600 bg-red-50 rounded text-sm'; else e.target.className = 'w-full px-3 py-2 border border-gray-300 rounded text-sm'; }} className="w-full px-3 py-2 border border-gray-300 rounded text-sm" />
+                                                {data.employee_metrics[`${i}_result`] && !/^[0-9.]*$/.test(data.employee_metrics[`${i}_result`]) && <p className="error-text">❌ Must be a number</p>}
+                                            </div>
+                                            <input type="text" placeholder="Source" value={data.employee_metrics[`${i}_source`] || ''} onChange={(e) => handleMetricChange('employee_metrics', `${i}_source`, e.target.value)} className="px-3 py-2 border border-gray-300 rounded text-sm" />
+                                        </div>
+                                    </div>
+                                ))}
+                                <div className="font-bold text-sm text-blue-700 mb-3 mt-6">Product Orientation:</div>
+                                {['Quality Certification', 'Quality Officers', 'Marketing', 'Delivery Precision', 'Cost Precision'].map((m, i) => (
+                                    <div key={i} className="metric-row">
+                                        <label className="block text-sm font-medium mb-2">{m}</label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <input type="text" placeholder="Result (numbers)" value={data.product_metrics[`${i}_result`] || ''} onChange={(e) => handleMetricChange('product_metrics', `${i}_result`, e.target.value)} onBlur={(e) => { if (e.target.value && !/^[0-9.]*$/.test(e.target.value)) e.target.className = 'w-full px-3 py-2 border-2 border-red-600 bg-red-50 rounded text-sm'; else e.target.className = 'w-full px-3 py-2 border border-gray-300 rounded text-sm'; }} className="w-full px-3 py-2 border border-gray-300 rounded text-sm" />
+                                                {data.product_metrics[`${i}_result`] && !/^[0-9.]*$/.test(data.product_metrics[`${i}_result`]) && <p className="error-text">❌ Must be a number</p>}
+                                            </div>
+                                            <input type="text" placeholder="Source" value={data.product_metrics[`${i}_source`] || ''} onChange={(e) => handleMetricChange('product_metrics', `${i}_source`, e.target.value)} className="px-3 py-2 border border-gray-300 rounded text-sm" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {step === 9 && (
+                        <div className="p-4 bg-green-50 border-l-4 border-green-500">
+                            <p className="text-green-800"><strong>✅ All sections complete!</strong></p>
+                        </div>
+                    )}
+
+                    <div className="flex gap-2 mt-8">
+                        <button onClick={() => { if (step > 1) setStep(step - 1); else setPage('dashboard'); }} className="flex-1 bg-gray-300 text-gray-800 px-4 py-3 rounded-lg font-bold">← Back</button>
+                        <button onClick={saveDraft} className="flex-1 bg-blue-500 text-white px-4 py-3 rounded-lg font-bold">💾 Save</button>
+                        {step < 9 && <button onClick={() => { if (!canProceed()) { setMsg('❌ Fill required fields'); } else { setStep(step + 1); setMsg(''); } }} className={`flex-1 px-4 py-3 rounded-lg font-bold text-white ${canProceed() ? 'bg-blue-600' : 'bg-gray-400'}`}>Next →</button>}
+                        {step === 9 && <button onClick={async () => { const submitData = {...data, financial_performance: data.financial_metrics, competitiveness: data.competitiveness_metrics, customer_satisfaction: data.customer_metrics, technology_advancement: data.tech_metrics, communication_framework: data.communication_metrics, collaboration: data.collaboration_metrics, employee_satisfaction: data.employee_metrics, product_orientation: data.product_metrics }; try { const res = await fetch('/api/submit-firm', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(submitData) }); if (res.ok) { localStorage.removeItem('firmDraftId'); setMsg('✅ Submitted!'); setTimeout(() => setPage('dashboard'), 3500); } } catch (e) { setMsg('❌ Error'); } }} className="flex-1 bg-green-600 text-white px-4 py-3 rounded-lg font-bold">✅ Submit</button>}
                     </div>
                 </div>
             );

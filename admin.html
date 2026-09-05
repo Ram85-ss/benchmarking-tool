@@ -1,416 +1,220 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - Benchmarking Tool</title>
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <style>
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        .glass {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        table {
-            font-size: 0.875rem;
-        }
-        .stat-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 12px;
-            padding: 20px;
-        }
-    </style>
 </head>
-<body class="min-h-screen py-8 px-4">
-    <div class="max-w-7xl mx-auto">
-        <!-- Header -->
-        <div class="mb-8">
-            <h1 class="text-4xl font-bold text-white mb-2">Admin Dashboard</h1>
-            <p class="text-white opacity-90">Global Gateway Benchmarking Tool - Responses & Analytics</p>
-        </div>
-
-        <!-- Statistics -->
-        <div id="stats" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <div class="stat-card">
-                <div class="text-3xl font-bold mb-2" id="project-count">0</div>
-                <p>Project Submissions</p>
-            </div>
-            <div class="stat-card">
-                <div class="text-3xl font-bold mb-2" id="firm-count">0</div>
-                <p>Firm Submissions</p>
-            </div>
-            <div class="stat-card">
-                <div class="text-3xl font-bold mb-2" id="total-count">0</div>
-                <p>Total Responses</p>
-            </div>
-            <div class="stat-card">
-                <div class="text-sm opacity-90 mb-2">Last Updated</div>
-                <p id="last-update" class="text-lg">--:-- --</p>
-            </div>
-        </div>
-
-        <!-- Tabs -->
-        <div class="glass rounded-lg p-6 mb-6">
-            <div class="flex gap-4 mb-6 border-b border-gray-200">
-                <button onclick="switchTab('projects')" id="projects-tab" class="px-4 py-2 font-semibold text-purple-600 border-b-2 border-purple-600">
-                    📊 Project Submissions
-                </button>
-                <button onclick="switchTab('firms')" id="firms-tab" class="px-4 py-2 font-semibold text-gray-500 border-b-2 border-transparent">
-                    🏢 Firm Submissions
-                </button>
+<body>
+    <div class="min-h-screen bg-gradient-to-r from-purple-600 to-purple-700 p-8">
+        <div class="max-w-6xl mx-auto">
+            <div class="bg-white p-6 rounded-lg mb-6">
+                <h1 class="text-3xl font-bold mb-2">📊 Admin Dashboard</h1>
+                <p class="text-gray-600">View and manage all submissions</p>
             </div>
 
-            <!-- Project Submissions Table -->
-            <div id="projects-content">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold text-gray-800">Project Level Submissions</h2>
-                    <button onclick="downloadJSON('projects')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
-                        ⬇️ Export JSON
-                    </button>
-                    <button onclick="downloadCSV('projects')" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg ml-2">
-                        📊 Export CSV
-                    </button>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead class="bg-gray-100 border-b-2 border-gray-300">
-                            <tr>
-                                <th class="px-4 py-3 text-left font-semibold text-gray-800">ID</th>
-                                <th class="px-4 py-3 text-left font-semibold text-gray-800">Project Title</th>
-                                <th class="px-4 py-3 text-left font-semibold text-gray-800">Agency</th>
-                                <th class="px-4 py-3 text-left font-semibold text-gray-800">Firm</th>
-                                <th class="px-4 py-3 text-left font-semibold text-gray-800">Cost (USD)</th>
-                                <th class="px-4 py-3 text-left font-semibold text-gray-800">Submitted</th>
-                                <th class="px-4 py-3 text-center font-semibold text-gray-800">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="projects-table" class="divide-y divide-gray-200">
-                            <tr><td colspan="7" class="px-4 py-4 text-center text-gray-500">Loading...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
+            <div class="flex gap-2 mb-6">
+                <button id="projectBtn" class="bg-purple-600 text-white px-6 py-2 rounded-lg font-bold">📝 Projects</button>
+                <button id="firmBtn" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold">🏢 Firms</button>
             </div>
 
-            <!-- Firm Submissions Table -->
-            <div id="firms-content" class="hidden">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold text-gray-800">Firm Level Submissions</h2>
-                    <button onclick="downloadJSON('firms')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
-                        ⬇️ Export JSON
-                    </button>
-                    <button onclick="downloadCSV('firms')" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg ml-2">
-                        📊 Export CSV
-                    </button>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead class="bg-gray-100 border-b-2 border-gray-300">
-                            <tr>
-                                <th class="px-4 py-3 text-left font-semibold text-gray-800">ID</th>
-                                <th class="px-4 py-3 text-left font-semibold text-gray-800">Firm Name</th>
-                                <th class="px-4 py-3 text-left font-semibold text-gray-800">Submitted</th>
-                                <th class="px-4 py-3 text-center font-semibold text-gray-800">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="firms-table" class="divide-y divide-gray-200">
-                            <tr><td colspan="4" class="px-4 py-4 text-center text-gray-500">Loading...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
+            <div id="projectsTab" class="bg-white p-6 rounded-lg mb-6">
+                <h2 class="text-2xl font-bold mb-4">📝 Project Submissions</h2>
+                <button id="exportProjects" class="bg-green-600 text-white px-4 py-2 rounded mb-4">📊 Export CSV</button>
+                <div id="projectsTable"></div>
+            </div>
+
+            <div id="firmsTab" class="bg-white p-6 rounded-lg mb-6 hidden">
+                <h2 class="text-2xl font-bold mb-4">🏢 Firm Submissions</h2>
+                <button id="exportFirms" class="bg-green-600 text-white px-4 py-2 rounded mb-4">📊 Export CSV</button>
+                <div id="firmsTable"></div>
             </div>
         </div>
     </div>
 
-    <!-- Detail Modal -->
-    <div id="detailModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div class="glass rounded-lg max-w-2xl w-full max-h-96 overflow-y-auto p-6">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-bold text-gray-800">Submission Details</h2>
-                <button onclick="closeModal()" class="text-2xl text-gray-500 hover:text-gray-700">×</button>
-            </div>
-            <div id="modalContent" class="text-gray-700">
-                <!-- Details will be inserted here -->
-            </div>
+    <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white p-6 rounded-lg max-w-4xl w-full max-h-96 overflow-y-auto">
+            <button onclick="document.getElementById('modal').classList.add('hidden')" class="text-gray-500 text-2xl mb-4">✕</button>
+            <div id="modalContent"></div>
         </div>
     </div>
 
     <script>
-        const API_URL = window.location.origin;
         let projectsData = [];
         let firmsData = [];
 
-        // Initialize
-        async function init() {
-            await loadStats();
-            await loadProjects();
-            await loadFirms();
+        async function loadData() {
+            projectsData = await fetch('/api/admin/projects').then(r => r.json());
+            firmsData = await fetch('/api/admin/firms').then(r => r.json());
+            renderProjects();
+            renderFirms();
         }
 
-        async function loadStats() {
-            try {
-                const response = await fetch(`${API_URL}/api/stats`);
-                const data = await response.json();
-                
-                document.getElementById('project-count').textContent = data.total_project_submissions;
-                document.getElementById('firm-count').textContent = data.total_firm_submissions;
-                document.getElementById('total-count').textContent = data.total_submissions;
-                
-                const date = new Date(data.last_updated);
-                document.getElementById('last-update').textContent = date.toLocaleString();
-            } catch (error) {
-                console.error('Error loading stats:', error);
-            }
-        }
-
-        async function loadProjects() {
-            try {
-                const response = await fetch(`${API_URL}/api/admin/projects`);
-                projectsData = await response.json();
-                renderProjectsTable();
-            } catch (error) {
-                console.error('Error loading projects:', error);
-                document.getElementById('projects-table').innerHTML = `
-                    <tr><td colspan="7" class="px-4 py-4 text-center text-red-500">Error loading data</td></tr>
-                `;
-            }
-        }
-
-        async function loadFirms() {
-            try {
-                const response = await fetch(`${API_URL}/api/admin/firms`);
-                firmsData = await response.json();
-                renderFirmsTable();
-            } catch (error) {
-                console.error('Error loading firms:', error);
-                document.getElementById('firms-table').innerHTML = `
-                    <tr><td colspan="4" class="px-4 py-4 text-center text-red-500">Error loading data</td></tr>
-                `;
-            }
-        }
-
-        function renderProjectsTable() {
-            const tbody = document.getElementById('projects-table');
-            if (projectsData.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-4 text-center text-gray-500">No submissions yet</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = projectsData.map(project => `
-                <tr class="hover:bg-gray-50">
-                    <td class="px-4 py-3 font-mono text-sm">${project.id}</td>
-                    <td class="px-4 py-3"><strong>${project.project_title}</strong></td>
-                    <td class="px-4 py-3 text-sm">${project.implementing_agency}</td>
-                    <td class="px-4 py-3 text-sm">${project.implementing_firm}</td>
-                    <td class="px-4 py-3 font-mono">$${parseFloat(project.initial_cost).toLocaleString()}</td>
-                    <td class="px-4 py-3 text-sm text-gray-500">${new Date(project.submission_date).toLocaleDateString()}</td>
-                    <td class="px-4 py-3 text-center">
-                        <button onclick="showProjectDetail(${project.id})" class="text-blue-600 hover:underline">
-                            View Details
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        function renderFirmsTable() {
-            const tbody = document.getElementById('firms-table');
-            if (firmsData.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-4 text-center text-gray-500">No submissions yet</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = firmsData.map(firm => `
-                <tr class="hover:bg-gray-50">
-                    <td class="px-4 py-3 font-mono text-sm">${firm.id}</td>
-                    <td class="px-4 py-3"><strong>${firm.firm_name}</strong></td>
-                    <td class="px-4 py-3 text-sm text-gray-500">${new Date(firm.submission_date).toLocaleDateString()}</td>
-                    <td class="px-4 py-3 text-center">
-                        <button onclick="showFirmDetail(${firm.id})" class="text-blue-600 hover:underline">
-                            View Details
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        function switchTab(tab) {
-            const projectsTab = document.getElementById('projects-tab');
-            const firmsTab = document.getElementById('firms-tab');
-            const projectsContent = document.getElementById('projects-content');
-            const firmsContent = document.getElementById('firms-content');
-
+        function showTab(tab) {
             if (tab === 'projects') {
-                projectsTab.classList.add('text-purple-600', 'border-purple-600');
-                projectsTab.classList.remove('text-gray-500', 'border-transparent');
-                firmsTab.classList.remove('text-purple-600', 'border-purple-600');
-                firmsTab.classList.add('text-gray-500', 'border-transparent');
-                projectsContent.classList.remove('hidden');
-                firmsContent.classList.add('hidden');
+                document.getElementById('projectsTab').classList.remove('hidden');
+                document.getElementById('firmsTab').classList.add('hidden');
             } else {
-                firmsTab.classList.add('text-purple-600', 'border-purple-600');
-                firmsTab.classList.remove('text-gray-500', 'border-transparent');
-                projectsTab.classList.remove('text-purple-600', 'border-purple-600');
-                projectsTab.classList.add('text-gray-500', 'border-transparent');
-                firmsContent.classList.remove('hidden');
-                projectsContent.classList.add('hidden');
+                document.getElementById('projectsTab').classList.add('hidden');
+                document.getElementById('firmsTab').classList.remove('hidden');
             }
+        }
+
+        function renderProjects() {
+            const html = `
+                <table class="w-full border-collapse">
+                    <thead>
+                        <tr class="bg-purple-100">
+                            <th class="border p-3 text-left">Project</th>
+                            <th class="border p-3 text-left">Firm</th>
+                            <th class="border p-3 text-left">Cost</th>
+                            <th class="border p-3">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${projectsData.map(p => `
+                            <tr class="hover:bg-purple-50">
+                                <td class="border p-3"><strong>${p.project_title}</strong></td>
+                                <td class="border p-3">${p.implementing_firm || 'N/A'}</td>
+                                <td class="border p-3">$${parseFloat(p.initial_cost).toLocaleString()}</td>
+                                <td class="border p-3 text-center">
+                                    <button onclick="showProjectDetail(${p.id})" class="bg-purple-600 text-white px-3 py-1 rounded text-sm">View</button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            document.getElementById('projectsTable').innerHTML = html;
+        }
+
+        function renderFirms() {
+            const html = `
+                <table class="w-full border-collapse">
+                    <thead>
+                        <tr class="bg-blue-100">
+                            <th class="border p-3 text-left">Firm Name</th>
+                            <th class="border p-3 text-left">Submitted</th>
+                            <th class="border p-3">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${firmsData.map(f => `
+                            <tr class="hover:bg-blue-50">
+                                <td class="border p-3"><strong>${f.firm_name}</strong></td>
+                                <td class="border p-3">${new Date(f.submission_date).toLocaleDateString()}</td>
+                                <td class="border p-3 text-center">
+                                    <button onclick="showFirmDetail(${f.id})" class="bg-blue-600 text-white px-3 py-1 rounded text-sm">View</button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            document.getElementById('firmsTable').innerHTML = html;
         }
 
         function showProjectDetail(id) {
-            const project = projectsData.find(p => p.id === id);
-            if (!project) return;
+            const p = projectsData.find(x => x.id === id);
+            const parseMetrics = (json) => {
+                try { return typeof json === 'string' ? JSON.parse(json) : json; } catch (e) { return {}; }
+            };
 
-            const modal = document.getElementById('detailModal');
-            const content = document.getElementById('modalContent');
+            const cats = [
+                { name: '💰 Cost Performance (20%)', items: ['Cost Variation', 'Unit Cost', 'Change Orders', 'Payment Compliance', 'Procurement Savings'], data: parseMetrics(p.cost_performance) },
+                { name: '⏱️ Schedule Performance (20%)', items: ['Schedule Variation', 'Milestone Consistency', 'Rain Days', 'RFI Time', 'RFC Time'], data: parseMetrics(p.schedule_performance) },
+                { name: '✓ Quality Performance (20%)', items: ['Defect Density', 'Material Pass Rate', 'Compliance', 'Tech Adoption', 'Rework'], data: parseMetrics(p.quality_performance) },
+                { name: '👥 Local Content (25%)', items: ['Workforce', 'Skill Transfer', 'Local Material', 'Sub-contracting', 'Procurement', 'Skill Spending', 'Skill Hours', 'Skill Levels', 'Skilled Earnings', 'Semi-skilled Earnings', 'Apprenticeships'], data: parseMetrics(p.local_content_performance) },
+                { name: '🛡️ Safety & Environment (15%)', items: ['Accident Rate', 'Accident Costs', 'PPE', 'Environmental', 'Sustainable Materials', 'Waste Management', 'Female Ratio', 'Youth Ratio'], data: parseMetrics(p.safety_env_performance) }
+            ];
 
-            content.innerHTML = `
-                <div class="space-y-4">
-                    <div>
-                        <h3 class="font-bold text-gray-800">Project Information</h3>
-                        <p><strong>ID:</strong> ${project.project_id}</p>
-                        <p><strong>Title:</strong> ${project.project_title}</p>
-                        <p><strong>Agency:</strong> ${project.implementing_agency}</p>
-                        <p><strong>Firm:</strong> ${project.implementing_firm}</p>
-                        <p><strong>Initial Cost:</strong> $${parseFloat(project.initial_cost).toLocaleString()}</p>
-                        <p><strong>Start Date:</strong> ${new Date(project.start_date).toLocaleDateString()}</p>
-                        <p><strong>Duration:</strong> ${project.duration} years</p>
-                    </div>
-                    <div>
-                        <h3 class="font-bold text-gray-800 mt-4">Performance Metrics (20% each)</h3>
-                        <div class="bg-blue-50 p-4 rounded-lg space-y-3">
-                            <div class="flex justify-between items-center">
-                                <span class="font-semibold text-gray-700">📊 Cost Performance (20%):</span>
-                                <span class="bg-blue-200 text-blue-800 px-3 py-1 rounded text-sm font-mono">${project.cost_performance ? JSON.parse(project.cost_performance)['0_result'] || 'N/A' : 'N/A'}</span>
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <span class="font-semibold text-gray-700">⏱️ Schedule Performance (20%):</span>
-                                <span class="bg-green-200 text-green-800 px-3 py-1 rounded text-sm font-mono">${project.schedule_performance ? JSON.parse(project.schedule_performance)['0_result'] || 'N/A' : 'N/A'}</span>
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <span class="font-semibold text-gray-700">✓ Quality Performance (20%):</span>
-                                <span class="bg-purple-200 text-purple-800 px-3 py-1 rounded text-sm font-mono">${project.quality_performance ? JSON.parse(project.quality_performance)['0_result'] || 'N/A' : 'N/A'}</span>
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <span class="font-semibold text-gray-700">👥 Local Content & Jobs (25%):</span>
-                                <span class="bg-yellow-200 text-yellow-800 px-3 py-1 rounded text-sm font-mono">${project.local_content_performance ? JSON.parse(project.local_content_performance)['0_result'] || 'N/A' : 'N/A'}</span>
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <span class="font-semibold text-gray-700">🛡️ Safety & Environment (15%):</span>
-                                <span class="bg-red-200 text-red-800 px-3 py-1 rounded text-sm font-mono">${project.safety_env_performance ? JSON.parse(project.safety_env_performance)['0_result'] || 'N/A' : 'N/A'}</span>
-                            </div>
-                        </div>
-                    </div>
+            let html = `
+                <h2 class="text-2xl font-bold mb-4">${p.project_title}</h2>
+                <div class="bg-purple-50 p-4 rounded-lg mb-4">
+                    <p><strong>Firm:</strong> ${p.implementing_firm}</p>
+                    <p><strong>Cost:</strong> $${parseFloat(p.initial_cost).toLocaleString()}</p>
+                    <p><strong>Duration:</strong> ${p.duration} years</p>
+                    <p><strong>Submitted:</strong> ${new Date(p.submission_date).toLocaleString()}</p>
                 </div>
+                <h3 class="font-bold text-lg mb-3">Performance Metrics</h3>
             `;
+            
+            cats.forEach(cat => {
+                html += `<div class="bg-purple-50 p-3 rounded-lg mb-3"><h4 class="font-bold mb-2">${cat.name}</h4><div class="text-sm space-y-1">`;
+                cat.items.forEach((item, i) => {
+                    const result = cat.data[i + '_result'] || '—';
+                    const source = cat.data[i + '_source'] || '';
+                    html += `<p><span class="text-gray-700">${item}:</span> <strong>${result}</strong> <span class="text-xs text-gray-500">(${source})</span></p>`;
+                });
+                html += `</div></div>`;
+            });
 
-            modal.classList.remove('hidden');
+            document.getElementById('modalContent').innerHTML = html;
+            document.getElementById('modal').classList.remove('hidden');
         }
 
         function showFirmDetail(id) {
-            const firm = firmsData.find(f => f.id === id);
-            if (!firm) return;
+            const f = firmsData.find(x => x.id === id);
+            const parseMetrics = (json) => {
+                try { return typeof json === 'string' ? JSON.parse(json) : json; } catch (e) { return {}; }
+            };
 
-            const modal = document.getElementById('detailModal');
-            const content = document.getElementById('modalContent');
+            const cats = [
+                { name: '💰 Financial', items: ['Gross Profit', 'Net Profit', 'ROA', 'Admin Costs', 'Debt', 'Working Capital', 'Backlog'], data: parseMetrics(f.financial_performance) },
+                { name: '📊 Competitiveness', items: ['Bid Success', 'Surveys', 'CapEX', 'Tax', 'H&S', 'Human Capital', 'Training', 'Female'], data: parseMetrics(f.competitiveness) },
+                { name: '😊 Customer', items: ['Satisfaction', 'Acceptance', 'Complaints'], data: parseMetrics(f.customer_satisfaction) },
+                { name: '🔧 Technology', items: ['Tech', 'R&D', 'Digital Skills'], data: parseMetrics(f.technology_advancement) },
+                { name: '💬 Communication', items: ['Web', 'Meetings', 'Compliance'], data: parseMetrics(f.communication_framework) },
+                { name: '🤝 Collaboration', items: ['Teamwork', 'CSR', 'RFI', 'Conflict'], data: parseMetrics(f.collaboration) },
+                { name: '👥 Employee', items: ['Incentives', 'Pay', 'Leave', 'Welfare', 'Satisfaction'], data: parseMetrics(f.employee_satisfaction) },
+                { name: '📦 Product', items: ['Certification', 'Officers', 'Marketing', 'Delivery', 'Cost'], data: parseMetrics(f.product_orientation) }
+            ];
 
-            content.innerHTML = `
-                <div class="space-y-4">
-                    <div>
-                        <h3 class="font-bold text-gray-800">Firm Information</h3>
-                        <p><strong>Name:</strong> ${firm.firm_name}</p>
-                        <p><strong>Submitted:</strong> ${new Date(firm.submission_date).toLocaleString()}</p>
-                    </div>
-                    <div>
-                        <h3 class="font-bold text-gray-800 mt-4">Performance Data</h3>
-                        <pre class="bg-gray-100 p-3 rounded text-xs overflow-x-auto">
-${JSON.stringify({
-  financial: firm.financial_performance,
-  competitiveness: firm.competitiveness,
-  customer_satisfaction: firm.customer_satisfaction,
-  technology: firm.technology_advancement,
-  communication: firm.communication_framework,
-  collaboration: firm.collaboration,
-  employee_satisfaction: firm.employee_satisfaction,
-  product: firm.product_orientation
-}, null, 2)}
-                        </pre>
-                    </div>
-                </div>
-            `;
+            let html = `<h2 class="text-2xl font-bold mb-4">${f.firm_name}</h2>`;
+            cats.forEach(cat => {
+                html += `<div class="bg-blue-50 p-3 rounded-lg mb-3"><h4 class="font-bold mb-2">${cat.name}</h4><div class="text-sm space-y-1">`;
+                cat.items.forEach((item, i) => {
+                    const result = cat.data[i + '_result'] || '—';
+                    const source = cat.data[i + '_source'] || '';
+                    html += `<p><span class="text-gray-700">${item}:</span> <strong>${result}</strong> <span class="text-xs text-gray-500">(${source})</span></p>`;
+                });
+                html += `</div></div>`;
+            });
 
-            modal.classList.remove('hidden');
-        }
-
-        function closeModal() {
-            document.getElementById('detailModal').classList.add('hidden');
+            document.getElementById('modalContent').innerHTML = html;
+            document.getElementById('modal').classList.remove('hidden');
         }
 
         function downloadCSV(type) {
             const data = type === 'projects' ? projectsData : firmsData;
-            if (data.length === 0) {
-                alert('No data to export!');
-                return;
-            }
-            
-            // Get headers from first object
-            const headers = Object.keys(data[0]);
-            
-            // Create CSV header
-            let csv = headers.join(',') + '\n';
-            
-            // Add data rows
+            const headers = Object.keys(data[0] || {});
+            let csv = headers.join(',') + "\n";
             data.forEach(row => {
-                const values = headers.map(header => {
-                    let value = row[header];
-                    if (value === null || value === undefined) return '';
-                    if (typeof value === 'object') value = JSON.stringify(value);
-                    // Escape commas and quotes
-                    if (String(value).includes(',') || String(value).includes('"')) {
-                        value = '"' + String(value).replace(/"/g, '""') + '"';
+                const values = headers.map(h => {
+                    let v = row[h] || '';
+                    if (typeof v === 'object') v = JSON.stringify(v);
+                    if (String(v).includes(',') || String(v).includes('"')) {
+                        v = '"' + String(v).replace(/"/g, '""') + '"';
                     }
-                    return value;
+                    return v;
                 });
-                csv += values.join(',') + '\n';
+                csv += values.join(',') + "\n";
             });
-            
-            // Create download link
             const blob = new Blob([csv], { type: 'text/csv' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${type}_submissions_${new Date().toISOString().split('T')[0]}.csv`;
+            a.download = type + '_' + new Date().toISOString().split('T')[0] + '.csv';
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
         }
 
-        function downloadJSON(type) {
-            const data = type === 'projects' ? projectsData : firmsData;
-            const element = document.createElement('a');
-            element.setAttribute('href', 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(data, null, 2)));
-            element.setAttribute('download', `${type}_submissions_${new Date().toISOString().split('T')[0]}.json`);
-            element.style.display = 'none';
-            document.body.appendChild(element);
-            element.click();
-            document.body.removeChild(element);
-        }
+        document.getElementById('projectBtn').addEventListener('click', () => showTab('projects'));
+        document.getElementById('firmBtn').addEventListener('click', () => showTab('firms'));
+        document.getElementById('exportProjects').addEventListener('click', () => downloadCSV('projects'));
+        document.getElementById('exportFirms').addEventListener('click', () => downloadCSV('firms'));
 
-        // Auto-refresh every 30 seconds
-        setInterval(() => {
-            loadStats();
-            loadProjects();
-            loadFirms();
-        }, 30000);
-
-        // Initial load
-        init();
+        loadData();
     </script>
 </body>
 </html>
